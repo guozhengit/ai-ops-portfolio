@@ -26,6 +26,8 @@ from prometheus_client import (
     generate_latest,
 )
 
+from chaos_ui import UI_HTML
+
 APP_PORT = int(os.getenv("CHAOS_PORT", "9400"))
 DATA_DIR = os.getenv("CHAOS_DATA_DIR", "/data/chaos-logs")
 DISK_QUOTA_BYTES = int(os.getenv("CHAOS_DISK_QUOTA", str(500 * 1024 * 1024)))  # 模拟配额 500MB
@@ -193,6 +195,11 @@ def stop_workers(scene: str):
         DISK_USAGE_RATIO.set(0)
 
 
+@app.get("/")
+def ui():
+    return Response(UI_HTML, mimetype="text/html")
+
+
 @app.get("/metrics")
 def metrics():
     MEMORY_RSS_BYTES.set(read_rss_bytes())
@@ -238,6 +245,7 @@ def status():
     return jsonify(
         active=active,
         rss_bytes=read_rss_bytes(),
+        leak_bytes=int(MEMORY_ALLOCATED._value.get()),  # noqa: SLF001
         disk_used_bytes=int(DISK_USAGE_BYTES._value.get()),  # noqa: SLF001
         pool_in_use=int(POOL_IN_USE._value.get()),  # noqa: SLF001
         nacos_registered=int(NACOS_REGISTERED._value.get()),  # noqa: SLF001
