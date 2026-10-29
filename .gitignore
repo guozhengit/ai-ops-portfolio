@@ -1,0 +1,56 @@
+# ===== Key 治理（最高优先级，宁枉勿纵）=====
+# 真实密钥只允许存在于以下文件，全部拒绝入库：
+.env
+.env.*
+!.env.example
+**/application-dev.yml
+**/application-local.yml
+**/secrets/
+**/*.key
+**/*.pem
+**/*credential*
+**/apiKey*
+**/api_key*
+
+# ===== WorkBuddy 工作区数据（不入作品集仓库）=====
+.workbuddy/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ===== Java / Spring Boot =====
+target/
+build/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.gradle/
+out/
+*.log
+hs_err_pid*
+
+# ===== Node（如原型含前端面板）=====
+node_modules/
+dist/
+
+# ===== IDE / OS =====
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ===== 运行时产物 =====
+logs/
+*.pid
+data/cache/
+reports/local/

@@ -1,0 +1,71 @@
+# 供应商路由配置模板（原型 2 model-router 的静态策略输入）
+# ------------------------------------------------------------
+# 占位模板：价格表填官网牌价，能力分 1-5 自评（后续用 verification/
+# 评分脚本实测回填）。真实路由引擎以此文件为单一事实来源。
+
+providers:
+  - id: glm
+    name: 智谱 GLM
+    base_url_env: ZHIPU_API_KEY     # Key 从 .env 注入，本文件永不落密钥
+    price_in_per_mtok: 0.00         # TODO: 填牌价
+    price_out_per_mtok: 0.00
+    capability: { reasoning: 0, coding: 0, vision: 0, longctx: 0 }
+    timeout_ms: 30000
+    max_retries: 2
+
+  - id: qwen
+    name: 阿里百炼 Qwen
+    price_in_per_mtok: 0.00
+    price_out_per_mtok: 0.00
+    capability: { reasoning: 0, coding: 0, vision: 0, longctx: 0 }
+    timeout_ms: 30000
+    max_retries: 2
+
+  - id: deepseek
+    name: DeepSeek
+    price_in_per_mtok: 0.00
+    price_out_per_mtok: 0.00
+    capability: { reasoning: 0, coding: 0, vision: 0, longctx: 0 }
+    timeout_ms: 60000
+    max_retries: 2
+
+  - id: hunyuan
+    name: 腾讯混元
+    price_in_per_mtok: 0.00
+    price_out_per_mtok: 0.00
+    capability: { reasoning: 0, coding: 0, vision: 0, longctx: 0 }
+    timeout_ms: 30000
+    max_retries: 2
+
+  - id: doubao
+    name: 字节豆包
+    price_in_per_mtok: 0.00
+    price_out_per_mtok: 0.00
+    capability: { reasoning: 0, coding: 0, vision: 0, longctx: 0 }
+    timeout_ms: 30000
+    max_retries: 2
+
+  - id: xiaomi
+    name: 小米
+    price_in_per_mtok: 0.00
+    price_out_per_mtok: 0.00
+    capability: { reasoning: 0, coding: 0, vision: 0, longctx: 0 }
+    timeout_ms: 30000
+    max_retries: 2
+
+  - id: lmstudio
+    name: 本地 LM Studio (Qwen3.5-9B)
+    price_in_per_mtok: 0.0          # 本地电费忽略不计，计量记录 tokens 供对比
+    price_out_per_mtok: 0.0
+    capability: { reasoning: 0, coding: 0, vision: 0, longctx: 0 }
+    timeout_ms: 120000
+    max_retries: 0
+    role: fallback                   # 云端全挂/超预算时的兜底档
+
+# 路由策略占位（v1 规则路由用）
+routing:
+  default: qwen
+  rules:
+    # - match_task: coding        -> prefer: deepseek
+    # - match_task: vision        -> prefer: qwen
+    # - match_budget: exhausted   -> fallback: lmstudio
