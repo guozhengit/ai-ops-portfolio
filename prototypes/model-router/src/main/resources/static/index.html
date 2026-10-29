@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>tts-router 控制台</title>
+  <title>model-router 控制台</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <h1>🎧 tts-router</h1>
+    <h1>🔀 model-router</h1>
     <div class="header-meta">
       <span id="service-state" class="pill">加载中…</span>
       <button id="refresh-btn" class="ghost" type="button">刷新状态</button>
@@ -22,6 +22,7 @@
       <div class="card"><div class="card-label">今日字符</div><div class="card-value" id="stat-chars">–</div></div>
       <div class="card"><div class="card-label">缓存命中</div><div class="card-value" id="stat-cached">–</div></div>
       <div class="card"><div class="card-label">缓存占用</div><div class="card-value" id="stat-cache">–</div></div>
+      <div class="card"><div class="card-label">LLM 渠道可用</div><div class="card-value" id="stat-channels">–</div></div>
     </section>
 
     <section class="panel">
@@ -31,6 +32,15 @@
         <tbody id="engine-rows"></tbody>
       </table>
       <p class="muted" id="quota-line"></p>
+    </section>
+
+    <section class="panel" id="llm-panel">
+      <h2>LLM 渠道</h2>
+      <table>
+        <thead><tr><th>渠道</th><th>优先级</th><th>模型</th><th>价目</th><th>状态</th></tr></thead>
+        <tbody id="channel-rows"></tbody>
+      </table>
+      <p class="muted" id="channel-line"></p>
     </section>
 
     <section class="panel">
@@ -71,7 +81,7 @@
     </section>
   </main>
 
-  <footer class="muted">tts-router · OpenAI 兼容多引擎 TTS 路由器 · 状态页无需鉴权，合成走 /v1/* 鉴权</footer>
+  <footer class="muted">model-router · OpenAI 兼容多渠道路由网关（语音轴冻结保留）· 状态页无需鉴权，/v1/* 需鉴权 · 锁定渠道用 X-Router-Pin 头</footer>
 
   <script src="app.js"></script>
 </body>

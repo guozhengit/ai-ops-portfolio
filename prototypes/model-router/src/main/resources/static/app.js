@@ -36,6 +36,8 @@ function renderStatus(s) {
   $('quota-line').textContent = (s.quota.enabled ? '日配额 ' + fmtInt(s.quota.dailyChars) + ' 字符'
       : '配额未启用') + ' · 响应格式 ' + s.formats.join(' / ');
 
+  renderChannels(s.channels);
+
   const modelSel = $('f-model');
   const prev = modelSel.value;
   modelSel.innerHTML = s.models.map((m) => '<option value="' + esc(m.id) + '">' + esc(m.id) + '</option>').join('');
@@ -51,6 +53,46 @@ function renderStatus(s) {
     // 服务端没配 api-keys 时不需要鉴权，直接隐藏 key 输入框
     $('key-row').classList.add('hidden');
   }
+}
+
+/**
+ * LLM 渠道面板。价目未知是个一等状态，不是「便宜」——用 warn 色标出来，
+ * 因为它的账单会记 costUsd=null，看板不能假装那是 0 美元。
+ */
+function renderChannels(channels) {
+  const panel = $('llm-panel');
+  if (!Array.isArray(channels)) {
+    // 老版本 status 没有 channels 字段：整个面板藏掉，不要渲染一张空表
+    panel.classList.add('hidden');
+    $('stat-channels').textContent = '–';
+    return;
+  }
+  panel.classList.remove('hidden');
+
+  const tbody = $('channel-rows');
+  tbody.innerHTML = '';
+  for (const c of channels) {
+    const tr = document.createElement('tr');
+    const state = c.available
+      ? '<span class="pill ok">可用</span>'
+      : '<span class="pill warn">冷却中' + (c.cooldownUntil ? ' 至 ' + new Date(c.cooldownUntil).toLocaleTimeString() : '') + '</span>';
+    const price = c.priceKnown
+      ? '有价目'
+      : '<span class="pill warn">未知</span>';
+    tr.innerHTML = '<td><code>' + esc(c.id) + '</code></td>'
+      + '<td>' + c.priority + '</td>'
+      + '<td>' + (c.models || []).map(esc).join(', ') + '</td>'
+      + '<td>' + price + '</td>'
+      + '<td>' + state + '</td>';
+    tbody.appendChild(tr);
+  }
+
+  const alive = channels.filter((c) => c.available).length;
+  $('stat-channels').textContent = alive + ' / ' + channels.length;
+  const unknownPriced = channels.filter((c) => !c.priceKnown).map((c) => c.id);
+  $('channel-line').textContent = '选路：优先级升序 → 同级按输出单价升序（价目未知排最后）'
+    + (unknownPriced.length ? ' · 价目未知（成本记 null）：' + unknownPriced.join(', ') : '')
+    + ' · 锁定渠道用 X-Router-Pin 头或 <渠道id>:<模型名> 前缀';
 }
 
 $('f-speed').addEventListener('input', (e) => {
