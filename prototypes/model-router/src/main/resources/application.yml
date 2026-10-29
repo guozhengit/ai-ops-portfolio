@@ -47,7 +47,7 @@ router:
   usage-path: data/usage.jsonl
   aliases:
     # gpt-5.4-mini 挂掉时用 doubao 顶上（请求方只认一个名字）
-    gpt-5.4-mini: [ "miku:gpt-5.4-mini", "ark:doubao-seed-2.1-turbo", "mimo:mimo" ]
+    gpt-5.4-mini: [ "miku:gpt-5.4-mini", "ark:doubao-seed-2.1-turbo", "mimo:mimo-v2.6-flash" ]
   channels:
     - id: miku
       base-url: https://mikuapi.org/v1
@@ -76,7 +76,7 @@ router:
     - id: mimo
       base-url: https://api.xiaomimimo.com/v1
       api-key-env: XIAOMI_API_KEY
-      models: [mimo]
+      models: [mimo-v2.6-flash]
       priority: 4
       price-per-mtok-in: 0.10
       price-per-mtok-out: 0.40

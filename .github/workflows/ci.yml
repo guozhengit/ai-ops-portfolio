@@ -7,10 +7,12 @@ on:
     branches: [main]
     paths:
       - 'prototypes/self-healing-agent/**'
+      - 'prototypes/model-router/**'
       - '.github/workflows/**'
   pull_request:
     paths:
       - 'prototypes/self-healing-agent/**'
+      - 'prototypes/model-router/**'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -50,3 +52,22 @@ jobs:
           else
             echo "scan clean"
           fi
+
+  model-router:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: 单元测试（含熔断语义/402 落空/别名改写/成本计算）
+        working-directory: prototypes/model-router
+        run: mvn -B test
+
+      - name: 打包冒烟
+        working-directory: prototypes/model-router
+        run: mvn -B package -DskipTests
