@@ -264,7 +264,7 @@ function authHint(status) {
   const keyRowHidden = $('key-row').classList.contains('hidden');
   return keyRowHidden
     ? '\n\n提示：401 来自上游渠道（右上角 key 框被隐藏说明网关未启用鉴权，被拒的是渠道那侧的 key）。'
-    : '\n\n提示：右上角「API Key」框还没填——网关启用了鉴权，/v1/* 都要带 Bearer key。';
+    : '\n\n提示：右上角「API Key」框还没填——本地开发默认 key 见输入框灰字占位（application.yml 的 tts.api-keys）。';
 }
 
 /**

@@ -13,7 +13,8 @@
     <div class="header-meta">
       <span id="service-state" class="pill">加载中…</span>
       <label class="key-row" id="key-row">API Key
-        <input type="password" id="f-key" placeholder="sk-..." autocomplete="off">
+        <!-- placeholder 是本地开发占位 key（application.yml: tts.api-keys），不是真实凭据，可以明示 -->
+        <input type="password" id="f-key" placeholder="sk-local-dev-key" autocomplete="off">
       </label>
       <button id="refresh-btn" class="ghost" type="button">刷新状态</button>
     </div>
