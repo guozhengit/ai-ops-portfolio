@@ -26,6 +26,13 @@
   </nav>
 
   <main>
+    <div id="offline-hint" class="banner hidden">
+      <span>未连接到后端</span>
+      <span class="muted">控制台的数据来自 <code>/ui/api/status</code>：请用
+        <code>java -jar target/model-router-0.1.0-SNAPSHOT.jar --server.port=8410</code>
+        起服务后访问 <code>http://127.0.0.1:8410/</code>；直接打开 HTML 文件没有数据源。</span>
+    </div>
+
     <section class="grid">
       <div class="card"><div class="card-label">LLM 今日调用</div><div class="card-value" id="stat-llm-calls">–</div></div>
       <div class="card"><div class="card-label">LLM 今日成本（已知）</div><div class="card-value" id="stat-llm-cost">–</div><div class="card-note" id="stat-llm-unknown"></div></div>

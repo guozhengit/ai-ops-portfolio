@@ -1,5 +1,26 @@
 const $ = (id) => document.getElementById(id);
 
+/**
+ * localStorage 在沙箱 iframe（没有 allow-same-origin）、隐私模式、禁用 Cookie 的场景下
+ * 访问就会抛异常。之前直接读写它，一抛就把整个状态渲染带崩了——页面只剩一串「–」。
+ * 存 key 只是个便利功能，用不了就当没这功能，绝不能拖垮主流程。
+ */
+function lsGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function lsSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    // 存不下就算了
+  }
+}
+
 async function loadStatus() {
   try {
     const res = await fetch('/ui/api/status');
@@ -7,10 +28,13 @@ async function loadStatus() {
     renderStatus(await res.json());
     $('service-state').textContent = '运行中';
     $('service-state').className = 'pill ok';
+    $('offline-hint').classList.add('hidden');
   } catch (e) {
     console.error('状态加载失败', e);
     $('service-state').textContent = '无法连接';
     $('service-state').className = 'pill bad';
+    // 说清楚为什么是一片「–」，别让人以为是界面坏了
+    $('offline-hint').classList.remove('hidden');
   }
 }
 
@@ -74,8 +98,7 @@ function renderStatus(s) {
     $('key-row').classList.remove('hidden');
     // 只在输入框为空时才回填，避免周期刷新把用户正在输入的 key 冲掉
     if (!$('f-key').value) {
-      $('f-key').value = localStorage.getItem('router-api-key')
-        || localStorage.getItem('tts-api-key') || '';
+      $('f-key').value = lsGet('router-api-key') || lsGet('tts-api-key') || '';
     }
   } else {
     // 服务端没配 api-keys 时不需要鉴权，直接隐藏 key 输入框
@@ -103,6 +126,13 @@ function renderChannels(channels) {
 
   const tbody = $('channel-rows');
   tbody.innerHTML = '';
+  if (!channels.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="muted">没有已启用的渠道：'
+      + '检查 .env 里的 key 是否设置（缺 key 的渠道会在装配期被禁用）</td></tr>';
+    $('stat-channels').textContent = '0 / 0';
+    return;
+  }
+
   for (const c of channels) {
     const tr = document.createElement('tr');
     const state = c.available
@@ -138,7 +168,11 @@ function renderChannels(channels) {
 function renderModels(models) {
   const tbody = $('model-rows');
   tbody.innerHTML = '';
-  if (!Array.isArray(models)) return;
+  if (!Array.isArray(models) || !models.length) {
+    // 空表比空 td 更难看懂：明确写出「没数据」而不是让人以为表格坏了
+    tbody.innerHTML = '<tr><td colspan="4" class="muted">暂无模型（后端未连接，或渠道全部被禁用）</td></tr>';
+    return;
+  }
 
   for (const m of models) {
     const tr = document.createElement('tr');
@@ -281,16 +315,11 @@ $('chat-form').addEventListener('submit', async (ev) => {
 
 /** 语音与对话共用一把 key：存一次，两个表单都能用。 */
 function apiKey() {
-  return ($('f-key').value || localStorage.getItem('router-api-key')
-    || localStorage.getItem('tts-api-key') || '').trim();
+  return ($('f-key').value || lsGet('router-api-key') || lsGet('tts-api-key') || '').trim();
 }
 
 $('f-key').addEventListener('change', (e) => {
-  localStorage.setItem('router-api-key', e.target.value.trim());
-});
-
-$('f-key').addEventListener('change', (e) => {
-  localStorage.setItem('router-api-key', e.target.value.trim());
+  lsSet('router-api-key', e.target.value.trim());
 });
 
 $('speech-form').addEventListener('submit', async (ev) => {

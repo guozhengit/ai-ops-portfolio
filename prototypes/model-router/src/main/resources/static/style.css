@@ -138,8 +138,15 @@ input[type="password"] { width: 260px; }
   vertical-align: middle;
 }
 
-.row label.checkbox { display: flex; align-items: center; gap: 6px; }
-.row input[type="checkbox"] { width: auto; margin: 0; }
+/* 复选框要横排：.row label 默认是 column，不显式改回来复选框会跑到文字上方 */
+.row label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.row input[type="checkbox"] { width: auto; height: auto; margin: 0; padding: 0; }
 
 /* ---- 标签页：对话轴 / 语音轴 ---- */
 .tabs {
@@ -169,6 +176,23 @@ input[type="password"] { width: 260px; }
 }
 
 .tag.muted-tag { color: var(--muted); }
+
+/* 后端没连上时的提示条：直接打开 HTML 文件（file://）没有数据源，
+   页面会全是一串「–」，不说清楚的话用户只会以为是界面坏了 */
+.banner {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  background: rgba(232, 178, 61, .10);
+  border: 1px solid rgba(232, 178, 61, .35);
+  color: var(--warn);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.banner code { color: var(--text); }
+.banner.hidden { display: none !important; }
 
 pre {
   white-space: pre-wrap;
