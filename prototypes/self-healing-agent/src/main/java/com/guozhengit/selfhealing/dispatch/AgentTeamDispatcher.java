@@ -38,6 +38,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * D10：AgentScope harness Team 诊断编排（原型 1 的核心）。
@@ -270,10 +271,15 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
         }
         String summary = "";
         for (int round = 1; round <= maxRounds; round++) {
-            log.info("[diag] round {} worker 执行", round);
-            callWithRetry(metrics, "继续执行团队分配给你的任务。", Duration.ofMinutes(4));
-            callWithRetry(logs, "继续执行团队分配给你的任务。", Duration.ofMinutes(4));
-            callWithRetry(remedy, "继续执行团队分配给你的任务。", Duration.ofMinutes(4));
+            log.info("[diag] round {} worker 并行执行（MTTD 优化：3 worker 串行改并行）", round);
+            // MTTD 优化：三个 worker 相互独立、各自带重试，并行跑把每轮 3 次串行 LLM 回合压成 1 次
+            CompletableFuture<Void> fMetrics = CompletableFuture.runAsync(
+                    () -> runWorkerQuietly(metrics, "继续执行团队分配给你的任务。"));
+            CompletableFuture<Void> fLogs = CompletableFuture.runAsync(
+                    () -> runWorkerQuietly(logs, "继续执行团队分配给你的任务。"));
+            CompletableFuture<Void> fRemedy = CompletableFuture.runAsync(
+                    () -> runWorkerQuietly(remedy, "继续执行团队分配给你的任务。"));
+            CompletableFuture.allOf(fMetrics, fLogs, fRemedy).join();
             if (allTerminal(client, teamName)) {
                 log.info("[diag] round {} 白板全结算，lead 生成报告", round);
                 Msg r = callWithRetry(lead, "所有任务已 settled。请汇总产出最终 Markdown 诊断报告并 completeTeam，报告全文作为回复输出。",
@@ -298,6 +304,16 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
         List<TeamTask> tasks = client.listTasks("default", team).block(Duration.ofSeconds(10));
         return tasks != null && !tasks.isEmpty()
                 && tasks.stream().allMatch(t -> TeamTask.isTerminal(t.state()));
+    }
+
+    /** 并行 worker 包装：任一 worker 重试耗尽即抛出（触发整场降级），与串行版语义一致。 */
+    private void runWorkerQuietly(ReActAgent worker, String prompt) {
+        try {
+            callWithRetry(worker, prompt, Duration.ofMinutes(4));
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("worker interrupted", ie);
+        }
     }
 
     private ReActAgent buildMember(TeamClient client, String team, String role, String sysPrompt,
