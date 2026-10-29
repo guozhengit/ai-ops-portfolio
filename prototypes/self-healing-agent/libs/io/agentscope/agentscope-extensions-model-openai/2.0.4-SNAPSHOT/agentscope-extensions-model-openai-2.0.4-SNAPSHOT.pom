@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2024-2026 the original author or authors.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+-->
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.agentscope</groupId>
+  <artifactId>agentscope-extensions-model-openai</artifactId>
+  <version>2.0.4-SNAPSHOT</version>
+  <name>AgentScope Java - Extensions - Model - OpenAI</name>
+  <description>OpenAI model provider extension for AgentScope Java</description>
+  <url>https://github.com/agentscope-ai/agentscope-java/agentscope-extensions/agentscope-extensions-model/agentscope-extensions-model-openai</url>
+  <organization>
+    <name>Alibaba</name>
+    <url>https://agentscope.io</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>Apache 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>AgentScopeTeam</id>
+      <name>AgentScopeTeam</name>
+      <email>agentscope.team@gmail.com</email>
+      <organization>Alibaba</organization>
+      <organizationUrl>https://agentscope.io</organizationUrl>
+    </developer>
+  </developers>
+  <scm>
+    <connection>git@github.com:agentscope-ai/agentscope-java.git/agentscope-extensions/agentscope-extensions-model/agentscope-extensions-model-openai</connection>
+    <developerConnection>git@github.com:agentscope-ai/agentscope-java.git/agentscope-extensions/agentscope-extensions-model/agentscope-extensions-model-openai</developerConnection>
+    <url>https://github.com/agentscope-ai/agentscope-java/agentscope-extensions/agentscope-extensions-model/agentscope-extensions-model-openai</url>
+  </scm>
+  <distributionManagement>
+    <repository>
+      <id>sonatype-nexus-staging</id>
+      <name>Nexus Release Repository</name>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+    <snapshotRepository>
+      <id>sonatype-nexus-snapshots</id>
+      <name>Sonatype Nexus Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+  <dependencies>
+    <dependency>
+      <groupId>io.agentscope</groupId>
+      <artifactId>agentscope-core</artifactId>
+      <version>2.0.4-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.21.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-core</artifactId>
+      <version>3.8.2</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+</project>

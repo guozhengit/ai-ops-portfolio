@@ -26,6 +26,14 @@ jobs:
           java-version: '25'
           cache: maven
 
+      # io.agentscope 2.0.4-SNAPSHOT 为本地源码构建产物（未发布 Central），
+      # 从仓库 libs/ 预置进本地 m2，模拟本地开发机的依赖环境
+      - name: 预置本地构建的 agentscope 依赖
+        run: |
+          mkdir -p ~/.m2/repository/io/agentscope
+          cp -r prototypes/self-healing-agent/libs/io/agentscope/* ~/.m2/repository/io/agentscope/
+          find ~/.m2/repository/io/agentscope -name "*.jar" | wc -l
+
       - name: 单元测试（11 例，含白名单拒绝/失败隔离/去重）
         working-directory: prototypes/self-healing-agent
         run: mvn -B test
