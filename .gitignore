@@ -36,6 +36,9 @@ build/
 # vendored 本地构建的 agentscope SNAPSHOT（CI 依赖预置用，见 ci.yml）
 !prototypes/self-healing-agent/libs/**/*.jar
 !prototypes/model-router/src/**
+# model-router 本地测试产生的 H2 数据库文件
+prototypes/model-router/*.mv.db
+prototypes/model-router/*.trace.db
 .gradle/
 out/
 *.log

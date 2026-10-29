@@ -10,7 +10,7 @@
 | 项目 | 解决的问题 | 状态 |
 | --- | --- | --- |
 | [prototypes/self-healing-agent](prototypes/self-healing-agent) | 怎么让 Agent 碰真实生产数据并可靠地干活 | 🔨 W2 开发中 |
-| [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | 📋 W3 排期 |
+| [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | 🔨 W3 开发中 |
 | [prototypes/infra-checkup](prototypes/infra-checkup) | 怎么把人的检查方法论固化成 Agent 流程 | 📋 W4 排期 |
 | [verification/](verification) | Agent 产出怎么被外部证明是对的（第 4 资产） | 📋 随原型推进 |
 
