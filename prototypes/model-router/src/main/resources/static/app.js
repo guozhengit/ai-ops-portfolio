@@ -85,6 +85,8 @@ function renderStatus(s) {
       : '配额未启用') + ' · 响应格式 ' + s.formats.join(' / ');
 
   renderSection('LLM 渠道', () => renderChannels(s.channels));
+  // 模型候选依赖「全部模型」+「每个渠道声明的模型」两份数据，所以放在两者之后算
+  renderSection('试调候选', () => refreshChatModelOptions(false));
 
   // 语音下拉只该出现语音模型（kind=tts）；把对话模型喂给 /v1/audio/speech 必然失败
   const modelSel = $('f-model');
@@ -106,6 +108,10 @@ function renderStatus(s) {
   }
 }
 
+/** 全量模型清单（/v1/models 同源）与「渠道id → 该渠道声明的模型」，试调候选要按渠道过滤。 */
+let allModels = [];
+let channelModels = {};
+
 /**
  * LLM 渠道面板。价目未知是个一等状态，不是「便宜」——用 warn 色标出来，
  * 因为它的账单会记 costUsd=null，看板不能假装那是 0 美元。
@@ -113,6 +119,7 @@ function renderStatus(s) {
 function renderChannels(channels) {
   if (!Array.isArray(channels)) {
     $('stat-channels').textContent = '–';
+    channelModels = {};
     return;
   }
 
@@ -123,6 +130,9 @@ function renderChannels(channels) {
     + channels.map((c) => '<option value="' + esc(c.id) + '">' + esc(c.id)
         + '（优先级 ' + c.priority + '）</option>').join('');
   if ([...sel.options].some((o) => o.value === prevPin)) sel.value = prevPin;
+
+  channelModels = {};
+  for (const c of channels) channelModels[c.id] = c.models || [];
 
   const tbody = $('channel-rows');
   tbody.innerHTML = '';
@@ -164,8 +174,9 @@ function renderChannels(channels) {
     + ' · 锁定渠道用 X-Router-Pin 头或 <渠道id>:<模型名> 前缀';
 }
 
-/** 模型清单（与 /v1/models 同源），并把能走对话的模型填进试调下拉。 */
+/** 模型清单（与 /v1/models 同源）。试调候选由 refreshChatModelOptions 单独算。 */
 function renderModels(models) {
+  allModels = Array.isArray(models) ? models : [];
   const tbody = $('model-rows');
   tbody.innerHTML = '';
   if (!Array.isArray(models) || !models.length) {
@@ -186,21 +197,45 @@ function renderModels(models) {
     tbody.appendChild(tr);
   }
 
-  // 只有 llm / alias 能进对话模型候选：把语音模型喂给 /v1/chat/completions 必然 503
-  const chatModels = models.filter((m) => String(m.kind || '').match(/llm|alias/));
-  const list = $('c-model-list');
-  list.innerHTML = chatModels.map((m) => '<option value="' + esc(m.id) + '"></option>').join('');
-  // 首次进入给个默认值，之后尊重用户手输的内容
-  const input = $('c-model');
-  if (!input.value && chatModels.length) {
-    input.value = chatModels[0].id;
-  }
-  $('chat-meta').textContent = '可填 ' + chatModels.length + ' 个对话模型（含别名入口）';
-
-  const aliasCount = models.filter((m) => String(m.kind || '').includes('alias')).length;
-  $('models-line').textContent = '共 ' + models.length + ' 个模型，其中别名入口 ' + aliasCount
+  const aliasCount = allModels.filter((m) => String(m.kind || '').includes('alias')).length;
+  $('models-line').textContent = '共 ' + allModels.length + ' 个模型，其中别名入口 ' + aliasCount
     + ' 个（别名本身没有渠道直供，它是降级链的入口）';
 }
+
+/**
+ * 试调模型候选随所选渠道联动。之前渠道选了 miku、模型框还留着 deepseek-chat，
+ * 发出去必然 404——两个控件各填各的，等于埋了个必踩的坑。规则：
+ *  - 自动路由：llm + alias 都可填（别名是降级链入口）；
+ *  - 锁定渠道：只能填该渠道声明的模型，当前值不匹配就换第一个；
+ *  - 用户手输的不强行清空（自动路由下），但锁渠道时不匹配必换。
+ */
+function refreshChatModelOptions(force) {
+  const pin = $('c-channel').value;
+  const input = $('c-model');
+  const list = $('c-model-list');
+
+  let candidates;
+  if (pin) {
+    // 锁了渠道：别名没有渠道直供，不在候选里
+    candidates = (channelModels[pin] || []);
+  } else {
+    candidates = allModels
+      .filter((m) => String(m.kind || '').match(/llm|alias/))
+      .map((m) => m.id);
+  }
+
+  list.innerHTML = candidates.map((id) => '<option value="' + esc(id) + '"></option>').join('');
+  const valueIn = candidates.some((id) => id === input.value);
+  if (!input.value || force || (pin && !valueIn)) {
+    input.value = candidates.length ? candidates[0] : '';
+  }
+  $('chat-meta').textContent = pin
+    ? '已锁定 ' + pin + '：只能填它声明的 ' + candidates.length + ' 个模型'
+    : (candidates.length ? '可填 ' + candidates.length + ' 个对话模型（含别名入口）' : '');
+}
+
+// 渠道一切换，模型候选立刻跟着换：不留「选 A 渠道 + 填 B 渠道模型」的组合
+$('c-channel').addEventListener('change', () => refreshChatModelOptions(true));
 
 // 标签页：对话轴与语音轴分开，互不干扰（语音轴已冻结，默认不占版面）
 for (const btn of document.querySelectorAll('.tab-btn')) {
@@ -219,6 +254,18 @@ $('f-speed').addEventListener('input', (e) => {
 });
 
 $('refresh-btn').addEventListener('click', loadStatus);
+
+/**
+ * 401 单靠后端原文（authentication_error / No API key provided）不够可操作：
+ * 把「去哪填 key」说清楚。key 框在 header 右上角，服务端没配 api-keys 时它整个隐藏。
+ */
+function authHint(status) {
+  if (status !== 401) return '';
+  const keyRowHidden = $('key-row').classList.contains('hidden');
+  return keyRowHidden
+    ? '\n\n提示：401 来自上游渠道（右上角 key 框被隐藏说明网关未启用鉴权，被拒的是渠道那侧的 key）。'
+    : '\n\n提示：右上角「API Key」框还没填——网关启用了鉴权，/v1/* 都要带 Bearer key。';
+}
 
 /**
  * LLM 试调：真发一个 /v1/chat/completions，把路由结果（走了哪个渠道、耗时、成本）
@@ -260,7 +307,8 @@ $('chat-form').addEventListener('submit', async (ev) => {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       const err = body.error || {};
-      let msg = 'HTTP ' + res.status + ' ' + (err.type || '') + '\n' + (err.message || '请求失败');
+      let msg = 'HTTP ' + res.status + ' ' + (err.type || '') + '\n' + (err.message || '请求失败')
+        + authHint(res.status);
       // 全渠道失败时后端会带回逐渠道原因，这是排障最关键的一段，不能只显示一句 502
       if (err.channels) {
         msg += '\n\n各渠道失败原因：';
@@ -354,7 +402,8 @@ $('speech-form').addEventListener('submit', async (ev) => {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       const err = body.error || {};
-      showError('HTTP ' + res.status + (err.code ? ' ' + err.code : '') + '\n' + (err.message || '请求失败'));
+      showError('HTTP ' + res.status + (err.code ? ' ' + err.code : '') + '\n' + (err.message || '请求失败')
+        + authHint(res.status));
       return;
     }
 

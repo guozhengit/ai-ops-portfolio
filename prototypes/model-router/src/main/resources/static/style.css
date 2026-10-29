@@ -31,7 +31,9 @@ h1 { font-size: 20px; margin: 0; }
 .header-meta { display: flex; gap: 12px; align-items: center; }
 
 main {
-  max-width: 960px;
+  /* 渠道表有 7 列，960px 太挤；放宽到 1180 并把卡片列宽收窄，
+     让 6 张卡能排成一行（之前第 6 张会孤零零换行） */
+  max-width: 1180px;
   margin: 0 auto;
   padding: 24px 28px 60px;
   display: flex;
@@ -41,7 +43,7 @@ main {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 14px;
 }
 
@@ -53,7 +55,15 @@ main {
 }
 
 .card-label { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
-.card-value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* 「0 B / 512.00 MB」这类值会折行，看着像坏了：单行显示，放不下就省略 */
+.card-value {
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .panel {
   background: var(--panel);
