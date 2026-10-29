@@ -37,13 +37,24 @@ public class UsageJournal {
     row.put("channel", channel.id());
     row.put("model", requestedModel);
     row.put("upstreamModel", upstreamModel);
-    row.put("promptTokens", promptTokens == null ? 0 : promptTokens);
-    row.put("completionTokens", completionTokens == null ? 0 : completionTokens);
-    double costUsd = (promptTokens == null ? 0 : promptTokens) / 1_000_000.0 * channel.pricePerMTokIn()
-        + (completionTokens == null ? 0 : completionTokens) / 1_000_000.0 * channel.pricePerMTokOut();
-    row.put("costUsd", Math.round(costUsd * 1_000_000.0) / 1_000_000.0);
-    row.put("pricePerMTokIn", channel.pricePerMTokIn());
-    row.put("pricePerMTokOut", channel.pricePerMTokOut());
+    Integer prompt = promptTokens == null ? 0 : promptTokens;
+    Integer completion = completionTokens == null ? 0 : completionTokens;
+    row.put("promptTokens", prompt);
+    row.put("completionTokens", completion);
+    Double priceIn = channel.pricePerMTokIn();
+    Double priceOut = channel.pricePerMTokOut();
+    // 价目未知或 token 数未知 → 成本记 null，绝不记 0：记 0 就是把「不知道」写成「免费」
+    boolean costKnown = priceIn != null && priceOut != null && promptTokens != null
+        && completionTokens != null;
+    if (costKnown) {
+      double costUsd = prompt / 1_000_000.0 * priceIn + completion / 1_000_000.0 * priceOut;
+      row.put("costUsd", Math.round(costUsd * 1_000_000.0) / 1_000_000.0);
+    } else {
+      row.put("costUsd", null);
+    }
+    row.put("costKnown", costKnown);
+    row.put("pricePerMTokIn", priceIn);
+    row.put("pricePerMTokOut", priceOut);
     row.put("latencyMs", latencyMs);
     row.put("stream", stream);
     try {

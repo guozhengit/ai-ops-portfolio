@@ -45,17 +45,24 @@ router:
     failure-threshold: 2
     cooldown: 60s
   usage-path: data/usage.jsonl
+  # 启动期拿 GET /v1/models 校准每个渠道声明的模型：中转渠道的可用模型跟着 key 走，
+  # 声明了但 key 没权益的模型会被摘掉，避免请求期稳定吃 404 才降级
+  probe-models: true
+  probe-timeout: 10s
   aliases:
-    # gpt-5.4-mini 挂掉时用 doubao 顶上（请求方只认一个名字）
-    gpt-5.4-mini: [ "miku:gpt-5.4-mini", "ark:doubao-seed-2.1-turbo", "mimo:mimo-v2.6-flash" ]
+    # gpt-5.4-mini 挂掉时用 doubao 顶上（请求方只认一个名字）。
+    # 注意首跳是 miku-gpt（旧 key）：新 key 的权益里根本没有 gpt-5.x（实测 404）
+    gpt-5.4-mini: [ "miku-gpt:gpt-5.4-mini", "ark:doubao-seed-2.1-turbo", "mimo:mimo-v2.6-flash" ]
   channels:
+    # 主档：MikuAPI 新 key，实测只通 deepseek-v4.1-flash（见 docs/channel-verification-miku-20261029.md）
     - id: miku
       base-url: https://mikuapi.org/v1
       api-key-env: MIKU_API_KEY
-      models: [gpt-5.4-mini, gpt-5.2, gpt-5.3-codex]
+      models: [deepseek-v4.1-flash]
       priority: 1
-      price-per-mtok-in: 0.30
-      price-per-mtok-out: 1.20
+      # 第三方中转没有公开价目：单价留空 = 记「未知」（成本账记 null 而不是 0）
+      price-per-mtok-in: ~
+      price-per-mtok-out: ~
       timeout: 90s
     - id: ark
       base-url: https://ark.cn-beijing.volces.com/api/plan/v3
@@ -80,4 +87,14 @@ router:
       priority: 4
       price-per-mtok-in: 0.10
       price-per-mtok-out: 0.40
+      timeout: 90s
+    # 同 base-url、另一把 key：权益只在 gpt-5.x 侧，且当前上游持续 503。
+    # 留着不是因为它能用，而是因为它是唯一能复现「瞬态故障→熔断→切渠道」的真实故障源
+    - id: miku-gpt
+      base-url: https://mikuapi.org/v1
+      api-key-env: MIKU_GPT_API_KEY
+      models: [gpt-5.4-mini, gpt-5.2, gpt-5.3-codex]
+      priority: 9
+      price-per-mtok-in: ~
+      price-per-mtok-out: ~
       timeout: 90s

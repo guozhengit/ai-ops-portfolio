@@ -39,12 +39,12 @@ public class HttpChannel implements LlmChannel {
   }
 
   @Override
-  public double pricePerMTokIn() {
+  public Double pricePerMTokIn() {
     return config.pricePerMTokIn();
   }
 
   @Override
-  public double pricePerMTokOut() {
+  public Double pricePerMTokOut() {
     return config.pricePerMTokOut();
   }
 

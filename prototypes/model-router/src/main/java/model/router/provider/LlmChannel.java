@@ -12,11 +12,11 @@ public interface LlmChannel {
 
   boolean supports(String model);
 
-  /** 每百万输入 token 单价（USD），成本账的一等公民。 */
-  double pricePerMTokIn();
+  /** 每百万输入 token 单价（USD），成本账的一等公民；null = 价目未知（中转渠道常见）。 */
+  Double pricePerMTokIn();
 
-  /** 每百万输出 token 单价（USD）。 */
-  double pricePerMTokOut();
+  /** 每百万输出 token 单价（USD）；null = 价目未知。 */
+  Double pricePerMTokOut();
 
   /** 非流式调用：转发原始请求体，返回响应 JSON 原文与 usage。 */
   ChatResult chat(String rawBody);

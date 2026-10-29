@@ -34,13 +34,22 @@ class ChatRoutingTest {
     private final List<String> models;
     private final ChannelException onChat;
     private final String body;
+    private final Double priceIn;
+    private final Double priceOut;
     volatile String lastBody;
 
     FakeChannel(String id, List<String> models, ChannelException onChat, String body) {
+      this(id, models, onChat, body, 1.0, 2.0);
+    }
+
+    FakeChannel(String id, List<String> models, ChannelException onChat, String body,
+                Double priceIn, Double priceOut) {
       this.id = id;
       this.models = models;
       this.onChat = onChat;
       this.body = body;
+      this.priceIn = priceIn;
+      this.priceOut = priceOut;
     }
 
     @Override
@@ -59,13 +68,13 @@ class ChatRoutingTest {
     }
 
     @Override
-    public double pricePerMTokIn() {
-      return 1.0;
+    public Double pricePerMTokIn() {
+      return priceIn;
     }
 
     @Override
-    public double pricePerMTokOut() {
-      return 2.0;
+    public Double pricePerMTokOut() {
+      return priceOut;
     }
 
     @Override
@@ -170,6 +179,20 @@ class ChatRoutingTest {
     // 1M in × $1 + 0.5M out × $2 = $2.0
     assertTrue(line.contains("\"costUsd\":2.0"), "成本账应入 JSONL：" + line);
     assertTrue(line.contains("\"channel\":\"healthy\""));
+  }
+
+  @Test
+  void unknownPriceRecordsNullCostInsteadOfZero() throws Exception {
+    // 中转渠道没有公开价目：单价 null。成本必须记「未知」，不能记 0——记 0 等于编造一笔免费账
+    FakeChannel relay = new FakeChannel("relay", List.of("m1"), null, "{}", null, null);
+    ChannelProperties props = properties();
+    UsageJournal journal = new UsageJournal(props);
+    journal.record(relay, "m1", "m1", 1_000_000, 500_000, 42, false);
+
+    String line = Files.readString(Path.of(props.getUsagePath())).trim();
+    assertTrue(line.contains("\"costUsd\":null"), "价目未知应记 null：" + line);
+    assertTrue(line.contains("\"costKnown\":false"), "应明确标注成本不可知：" + line);
+    assertTrue(line.contains("\"promptTokens\":1000000"), "token 数照实记：" + line);
   }
 
   private ChannelProperties properties() {

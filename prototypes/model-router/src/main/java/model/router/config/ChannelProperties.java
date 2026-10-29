@@ -21,6 +21,9 @@ public class ChannelProperties {
    * ——miku 挂掉时自动换 doubao 顶上，请求方只认一个名字。
    */
   private Map<String, List<String>> aliases = new LinkedHashMap<>();
+  /** 启动期用 GET /v1/models 校准每个渠道声明的模型清单（key 权益可能比声明的窄）。 */
+  private boolean probeModels = true;
+  private Duration probeTimeout = Duration.ofSeconds(10);
 
   public Map<String, List<String>> getAliases() {
     return aliases;
@@ -50,6 +53,22 @@ public class ChannelProperties {
     this.usagePath = usagePath;
   }
 
+  public boolean isProbeModels() {
+    return probeModels;
+  }
+
+  public void setProbeModels(boolean probeModels) {
+    this.probeModels = probeModels;
+  }
+
+  public Duration getProbeTimeout() {
+    return probeTimeout;
+  }
+
+  public void setProbeTimeout(Duration probeTimeout) {
+    this.probeTimeout = probeTimeout;
+  }
+
   public static class Health {
     private int failureThreshold = 2;
     private Duration cooldown = Duration.ofSeconds(60);
@@ -77,10 +96,14 @@ public class ChannelProperties {
     /** 从环境变量读取 key，配置文件永远不落明文（.env 治理纪律）。 */
     private String apiKeyEnv;
     private List<String> models = new ArrayList<>();
-    /** 越小越优先；同优先级按输出单价升序。 */
+    /** 越小越优先；同优先级按输出单价升序（单价未知的排在同优先级最后）。 */
     private int priority = 100;
-    private double pricePerMTokIn;
-    private double pricePerMTokOut;
+    /**
+     * 单价可空：中转渠道常常没有公开价目，这时必须记「未知」而不是记 0
+     * ——成本账的纪律是数字要有出处，记 0 等于编造一笔便宜账。
+     */
+    private Double pricePerMTokIn;
+    private Double pricePerMTokOut;
     private Duration timeout = Duration.ofSeconds(90);
 
     public String resolveApiKey() {
@@ -136,19 +159,19 @@ public class ChannelProperties {
       this.priority = priority;
     }
 
-    public double pricePerMTokIn() {
+    public Double pricePerMTokIn() {
       return pricePerMTokIn;
     }
 
-    public void setPricePerMTokIn(double pricePerMTokIn) {
+    public void setPricePerMTokIn(Double pricePerMTokIn) {
       this.pricePerMTokIn = pricePerMTokIn;
     }
 
-    public double pricePerMTokOut() {
+    public Double pricePerMTokOut() {
       return pricePerMTokOut;
     }
 
-    public void setPricePerMTokOut(double pricePerMTokOut) {
+    public void setPricePerMTokOut(Double pricePerMTokOut) {
       this.pricePerMTokOut = pricePerMTokOut;
     }
 
