@@ -38,3 +38,46 @@ tts:
     mp3-bitrate: 128k
     timeout: 30s
   engines: []
+
+# ---- LLM 渠道轴（W3 原型 2）：key 只从环境变量取，价格是成本账一等公民 ----
+router:
+  health:
+    failure-threshold: 2
+    cooldown: 60s
+  usage-path: data/usage.jsonl
+  aliases:
+    # gpt-5.4-mini 挂掉时用 doubao 顶上（请求方只认一个名字）
+    gpt-5.4-mini: [ "miku:gpt-5.4-mini", "ark:doubao-seed-2.1-turbo", "mimo:mimo" ]
+  channels:
+    - id: miku
+      base-url: https://mikuapi.org/v1
+      api-key-env: MIKU_API_KEY
+      models: [gpt-5.4-mini, gpt-5.2, gpt-5.3-codex]
+      priority: 1
+      price-per-mtok-in: 0.30
+      price-per-mtok-out: 1.20
+      timeout: 90s
+    - id: ark
+      base-url: https://ark.cn-beijing.volces.com/api/plan/v3
+      api-key-env: ARK_API_KEY
+      models: [doubao-seed-2.1-turbo]
+      priority: 2
+      price-per-mtok-in: 0.15
+      price-per-mtok-out: 0.60
+      timeout: 90s
+    - id: deepseek
+      base-url: https://api.deepseek.com
+      api-key-env: DEEPSEEK_API_KEY
+      models: [deepseek-chat]
+      priority: 3
+      price-per-mtok-in: 0.27
+      price-per-mtok-out: 1.10
+      timeout: 90s
+    - id: mimo
+      base-url: https://api.xiaomimimo.com/v1
+      api-key-env: XIAOMI_API_KEY
+      models: [mimo]
+      priority: 4
+      price-per-mtok-in: 0.10
+      price-per-mtok-out: 0.40
+      timeout: 90s
