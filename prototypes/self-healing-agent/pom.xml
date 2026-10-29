@@ -19,12 +19,30 @@
 
     <properties>
         <java.version>25</java.version>
+        <agentscope.version>2.0.4-SNAPSHOT</agentscope.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- AgentScope 底座：本地 Maven 仓库已 install（D:\AI\agentscope-java，2.0.4-SNAPSHOT）
+             依据：agentscope-learning L20/L21 于 JDK 25 真机冒烟通过（2026-10-29） -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-core</artifactId>
+            <version>${agentscope.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-model-openai</artifactId>
+            <version>${agentscope.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-harness</artifactId>
+            <version>${agentscope.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

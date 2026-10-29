@@ -7,7 +7,15 @@ spring:
 
 selfhealing:
   agent:
-    enabled: false      # D10 起 AgentScope Team 就绪后切 true，LoggingDispatcher 随即退位
+    enabled: true       # D10：AgentScope Team 诊断已接入（false=LoggingDispatcher 占位）
+    api-key: ${AGENT_API_KEY:${ARK_API_KEY:}}
+    base-url: ${AGENT_BASE_URL:${ARK_BASE_URL:https://ark.cn-beijing.volces.com/api/plan/v3}}
+    model: ${AGENT_MODEL:doubao-seed-2.1-turbo}
+    max-rounds: 6
+  prometheus:
+    url: ${PROMETHEUS_URL:http://192.168.1.160:9091}
+  chaos:
+    base-url: ${CHAOS_BASE_URL:http://127.0.0.1:9400}
   webhook:
     # 生产必须用环境变量 SELFHEALING_WEBHOOK_TOKEN 覆盖（Key 治理纪律）
     token: ${SELFHEALING_WEBHOOK_TOKEN:dev-token-change-me}
@@ -17,6 +25,7 @@ selfhealing:
     pool-size: 4
   journal:
     path: data/incidents.jsonl
+  reports-dir: reports
 
 logging:
   level:

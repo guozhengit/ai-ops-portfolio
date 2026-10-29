@@ -1,5 +1,11 @@
 # 原型 1：自愈型运维 Agent（旗舰项目，面试主打）
 
+> **D10 已完成端到端打通（2026-10-29）**：告警进 webhook → AgentScope Team 诊断
+> （lead / metrics-analyst / log-analyst / remedy-planner，每 member 只读工具+独立权限上下文）
+> → 带证据链的 Markdown 报告落盘 `reports/`。
+> 首份真机报告：[reports/incident-…-e2e1001.md](reports/incident-20261029T073815.493948900Z-e2e1001.md)
+> （诊断模型 doubao-seed-2.1-turbo，全程 8.6 分钟，报告含修复建议审批矩阵与反注入自检）。
+
 > **设计方案已定稿（W1 产出）**：见 [DESIGN.md](DESIGN.md) —— /ambitious 四步：
 > 改写后的任务 / 方法工具 / 野心目标 / 外部验证方式，含 5 故障场景与 W2 逐日节奏。
 

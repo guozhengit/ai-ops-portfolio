@@ -42,6 +42,8 @@ class WebhookIntegrationTest {
     static void props(DynamicPropertyRegistry registry) {
         registry.add("selfhealing.webhook.token", () -> TOKEN);
         registry.add("selfhealing.journal.path", () -> tempDir.resolve("incidents.jsonl").toString());
+        // 单测上下文不依赖真实模型 Key：诊断 Team 走 @Primary 计数替身
+        registry.add("selfhealing.agent.enabled", () -> "false");
     }
 
     @TestConfiguration
