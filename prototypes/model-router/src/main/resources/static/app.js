@@ -8,8 +8,18 @@ async function loadStatus() {
     $('service-state').textContent = '运行中';
     $('service-state').className = 'pill ok';
   } catch (e) {
+    console.error('状态加载失败', e);
     $('service-state').textContent = '无法连接';
     $('service-state').className = 'pill bad';
+  }
+}
+
+/** 分段渲染：某一块出错只丢那一块，不能让整页白屏（看板自己先挂掉最尴尬）。 */
+function renderSection(label, fn) {
+  try {
+    fn();
+  } catch (e) {
+    console.error(label + ' 渲染失败', e);
   }
 }
 
@@ -29,37 +39,43 @@ function renderStatus(s) {
     $('stat-llm-unknown').className = llm.unknownCostCalls ? 'card-note warn-text' : 'card-note';
   }
 
-  renderModels(s.models);
+  renderSection('模型清单', () => renderModels(s.models));
 
-  const tbody = $('engine-rows');
-  tbody.innerHTML = '';
-  for (const e of s.engines) {
-    const tr = document.createElement('tr');
-    const state = e.available
-      ? '<span class="pill ok">可用</span>'
-      : '<span class="pill warn">冷却中' + (e.cooldownUntil ? ' 至 ' + new Date(e.cooldownUntil).toLocaleTimeString() : '') + '</span>';
-    tr.innerHTML = '<td><code>' + esc(e.id) + '</code></td>'
-      + '<td>' + e.priority + '</td>'
-      + '<td>' + e.models.map(esc).join(', ') + '</td>'
-      + '<td>' + state + '</td>';
-    tbody.appendChild(tr);
-  }
+  renderSection('语音引擎', () => {
+    const tbody = $('engine-rows');
+    tbody.innerHTML = '';
+    for (const e of s.engines) {
+      const tr = document.createElement('tr');
+      const state = e.available
+        ? '<span class="pill ok">可用</span>'
+        : '<span class="pill warn">冷却中' + (e.cooldownUntil ? ' 至 ' + new Date(e.cooldownUntil).toLocaleTimeString() : '') + '</span>';
+      tr.innerHTML = '<td><code>' + esc(e.id) + '</code></td>'
+        + '<td>' + e.priority + '</td>'
+        + '<td>' + e.models.map(esc).join(', ') + '</td>'
+        + '<td>' + state + '</td>';
+      tbody.appendChild(tr);
+    }
+  });
 
   $('quota-line').textContent = (s.quota.enabled ? '日配额 ' + fmtInt(s.quota.dailyChars) + ' 字符'
       : '配额未启用') + ' · 响应格式 ' + s.formats.join(' / ');
 
-  renderChannels(s.channels);
+  renderSection('LLM 渠道', () => renderChannels(s.channels));
 
+  // 语音下拉只该出现语音模型（kind=tts）；把对话模型喂给 /v1/audio/speech 必然失败
   const modelSel = $('f-model');
   const prev = modelSel.value;
-  modelSel.innerHTML = s.models.map((m) => '<option value="' + esc(m.id) + '">' + esc(m.id) + '</option>').join('');
+  const speechModels = (s.models || []).filter((m) => String(m.kind || '').includes('tts'));
+  modelSel.innerHTML = speechModels.map((m) => '<option value="' + esc(m.id) + '">'
+      + esc(m.id) + '</option>').join('');
   if ([...modelSel.options].some((o) => o.value === prev)) modelSel.value = prev;
 
   if (s.authRequired) {
     $('key-row').classList.remove('hidden');
     // 只在输入框为空时才回填，避免周期刷新把用户正在输入的 key 冲掉
     if (!$('f-key').value) {
-      $('f-key').value = localStorage.getItem('tts-api-key') || '';
+      $('f-key').value = localStorage.getItem('router-api-key')
+        || localStorage.getItem('tts-api-key') || '';
     }
   } else {
     // 服务端没配 api-keys 时不需要鉴权，直接隐藏 key 输入框
@@ -72,14 +88,18 @@ function renderStatus(s) {
  * 因为它的账单会记 costUsd=null，看板不能假装那是 0 美元。
  */
 function renderChannels(channels) {
-  const panel = $('llm-panel');
   if (!Array.isArray(channels)) {
-    // 老版本 status 没有 channels 字段：整个面板藏掉，不要渲染一张空表
-    panel.classList.add('hidden');
     $('stat-channels').textContent = '–';
     return;
   }
-  panel.classList.remove('hidden');
+
+  // 渠道下拉：后端已经接了多个渠道，页面上就该能挑一个（对应 X-Router-Pin）
+  const sel = $('c-channel');
+  const prevPin = sel.value;
+  sel.innerHTML = '<option value="">自动路由</option>'
+    + channels.map((c) => '<option value="' + esc(c.id) + '">' + esc(c.id)
+        + '（优先级 ' + c.priority + '）</option>').join('');
+  if ([...sel.options].some((o) => o.value === prevPin)) sel.value = prevPin;
 
   const tbody = $('channel-rows');
   tbody.innerHTML = '';
@@ -132,17 +152,32 @@ function renderModels(models) {
     tbody.appendChild(tr);
   }
 
-  const sel = $('c-model');
-  const prev = sel.value;
-  // 只有 llm / alias 能进对话下拉：把语音模型喂给 /v1/chat/completions 必然 503
+  // 只有 llm / alias 能进对话模型候选：把语音模型喂给 /v1/chat/completions 必然 503
   const chatModels = models.filter((m) => String(m.kind || '').match(/llm|alias/));
-  sel.innerHTML = chatModels.map((m) => '<option value="' + esc(m.id) + '">'
-      + esc(m.id) + '（' + (m.owners || []).join('→') + '）</option>').join('');
-  if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
+  const list = $('c-model-list');
+  list.innerHTML = chatModels.map((m) => '<option value="' + esc(m.id) + '"></option>').join('');
+  // 首次进入给个默认值，之后尊重用户手输的内容
+  const input = $('c-model');
+  if (!input.value && chatModels.length) {
+    input.value = chatModels[0].id;
+  }
+  $('chat-meta').textContent = '可填 ' + chatModels.length + ' 个对话模型（含别名入口）';
 
   const aliasCount = models.filter((m) => String(m.kind || '').includes('alias')).length;
   $('models-line').textContent = '共 ' + models.length + ' 个模型，其中别名入口 ' + aliasCount
     + ' 个（别名本身没有渠道直供，它是降级链的入口）';
+}
+
+// 标签页：对话轴与语音轴分开，互不干扰（语音轴已冻结，默认不占版面）
+for (const btn of document.querySelectorAll('.tab-btn')) {
+  btn.addEventListener('click', () => {
+    for (const other of document.querySelectorAll('.tab-btn')) {
+      other.classList.toggle('active', other === btn);
+    }
+    for (const view of document.querySelectorAll('.tab-view')) {
+      view.classList.toggle('hidden', view.id !== 'tab-' + btn.dataset.tab);
+    }
+  });
 }
 
 $('f-speed').addEventListener('input', (e) => {
@@ -168,13 +203,17 @@ $('chat-form').addEventListener('submit', async (ev) => {
   $('chat-meta').textContent = '';
 
   const stream = $('c-stream').checked;
+  const pin = $('c-channel').value;
   const started = performance.now();
   try {
+    const headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey() };
+    // 选了具体渠道就走 X-Router-Pin：让人能绕开自动选路去验证某个渠道本身
+    if (pin) headers['X-Router-Pin'] = pin;
     const res = await fetch('/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey() },
+      headers,
       body: JSON.stringify({
-        model: $('c-model').value,
+        model: $('c-model').value.trim(),
         messages: [{ role: 'user', content: prompt }],
         max_tokens: parseInt($('c-max-tokens').value, 10),
         stream,
@@ -213,13 +252,15 @@ $('chat-form').addEventListener('submit', async (ev) => {
           return '';
         }
       }).join('');
-      $('chat-route').innerHTML = '渠道 <code>' + esc(channel) + '</code> · ' + frames.length
+      $('chat-route').innerHTML = '渠道 <code>' + esc(channel) + '</code>'
+        + (pin ? '（已锁定）' : '（自动选路）') + ' · ' + frames.length
         + ' 帧 · ' + elapsed + 'ms · 流式成本见账本（<code>ops/usage-report.py</code>）';
     } else {
       const body = await res.json();
       content = body.choices?.[0]?.message?.content || '';
       usage = body.usage;
-      $('chat-route').innerHTML = '渠道 <code>' + esc(channel) + '</code> · ' + elapsed + 'ms'
+      $('chat-route').innerHTML = '渠道 <code>' + esc(channel) + '</code>'
+        + (pin ? '（已锁定）' : '（自动选路）') + ' · ' + elapsed + 'ms'
         + (usage ? ' · ' + fmtInt(usage.prompt_tokens) + ' 入 / ' + fmtInt(usage.completion_tokens) + ' 出' : '')
         + ' · 成本 ' + (cost && cost !== 'unknown'
           ? '$' + Number(cost).toFixed(6)

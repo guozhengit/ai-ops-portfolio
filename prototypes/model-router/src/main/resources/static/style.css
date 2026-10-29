@@ -141,6 +141,35 @@ input[type="password"] { width: 260px; }
 .row label.checkbox { display: flex; align-items: center; gap: 6px; }
 .row input[type="checkbox"] { width: auto; margin: 0; }
 
+/* ---- 标签页：对话轴 / 语音轴 ---- */
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  border-radius: 0;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.tab-btn.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.tag.muted-tag { color: var(--muted); }
+
 pre {
   white-space: pre-wrap;
   word-break: break-word;

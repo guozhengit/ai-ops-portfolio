@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>model-router 控制台</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔀</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,100 +19,118 @@
     </div>
   </header>
 
+  <!-- 两个轴拆成标签页：语音轴已冻结，不该和对话轴挤在同一个视图里互相干扰 -->
+  <nav class="tabs">
+    <button class="tab-btn active" type="button" data-tab="llm">对话路由（LLM）</button>
+    <button class="tab-btn" type="button" data-tab="tts">语音合成（TTS · 冻结）</button>
+  </nav>
+
   <main>
     <section class="grid">
-      <div class="card"><div class="card-label">语音今日请求</div><div class="card-value" id="stat-requests">–</div></div>
-      <div class="card"><div class="card-label">语音今日字符</div><div class="card-value" id="stat-chars">–</div></div>
       <div class="card"><div class="card-label">LLM 今日调用</div><div class="card-value" id="stat-llm-calls">–</div></div>
       <div class="card"><div class="card-label">LLM 今日成本（已知）</div><div class="card-value" id="stat-llm-cost">–</div><div class="card-note" id="stat-llm-unknown"></div></div>
       <div class="card"><div class="card-label">LLM 渠道可用</div><div class="card-value" id="stat-channels">–</div></div>
+      <div class="card"><div class="card-label">语音今日请求</div><div class="card-value" id="stat-requests">–</div></div>
+      <div class="card"><div class="card-label">语音今日字符</div><div class="card-value" id="stat-chars">–</div></div>
       <div class="card"><div class="card-label">缓存占用</div><div class="card-value" id="stat-cache">–</div></div>
     </section>
 
-    <section class="panel" id="llm-panel">
-      <h2>LLM 渠道 <span class="tag">主軸</span></h2>
-      <table>
-        <thead><tr><th>渠道</th><th>优先级</th><th>模型</th><th>价目</th><th>今日调用</th><th>今日成本</th><th>状态</th></tr></thead>
-        <tbody id="channel-rows"></tbody>
-      </table>
-      <p class="muted" id="channel-line"></p>
-    </section>
+    <!-- ================= 对话轴 ================= -->
+    <div id="tab-llm" class="tab-view">
+      <section class="panel">
+        <h2>LLM 渠道 <span class="tag">主軸</span></h2>
+        <table>
+          <thead><tr><th>渠道</th><th>优先级</th><th>模型</th><th>价目</th><th>今日调用</th><th>今日成本</th><th>状态</th></tr></thead>
+          <tbody id="channel-rows"></tbody>
+        </table>
+        <p class="muted" id="channel-line"></p>
+      </section>
 
-    <section class="panel">
-      <h2>LLM 试调</h2>
-      <form id="chat-form">
-        <div class="row">
-          <label>模型 <select id="c-model"></select></label>
-          <label>最大 tokens <input id="c-max-tokens" type="number" min="1" max="4096" value="64" style="width:90px"></label>
-          <label class="checkbox"><input id="c-stream" type="checkbox"> 流式（SSE）</label>
+      <section class="panel">
+        <h2>LLM 试调</h2>
+        <form id="chat-form">
+          <div class="row">
+            <label>渠道
+              <select id="c-channel"></select>
+            </label>
+            <label>模型
+              <input id="c-model" list="c-model-list" placeholder="选一个或手输模型名">
+              <datalist id="c-model-list"></datalist>
+            </label>
+            <label>最大 tokens <input id="c-max-tokens" type="number" min="1" max="4096" value="64" style="width:90px"></label>
+            <label class="checkbox"><input id="c-stream" type="checkbox"> 流式（SSE）</label>
+          </div>
+          <textarea id="c-prompt" rows="3" placeholder="输入 prompt…">用一句话说明什么是熔断降级。</textarea>
+          <div class="actions">
+            <button type="submit" id="chat-btn">发送</button>
+            <span id="chat-meta" class="muted"></span>
+          </div>
+        </form>
+        <div id="chat-result" class="hidden">
+          <div id="chat-route" class="muted"></div>
+          <pre id="chat-content"></pre>
         </div>
-        <textarea id="c-prompt" rows="3" placeholder="输入 prompt…">用一句话说明什么是熔断降级。</textarea>
-        <div class="actions">
-          <button type="submit" id="chat-btn">发送</button>
-          <span id="chat-meta" class="muted"></span>
-        </div>
-      </form>
-      <div id="chat-result" class="hidden">
-        <div id="chat-route" class="muted"></div>
-        <pre id="chat-content"></pre>
-      </div>
-      <pre id="chat-error" class="error hidden"></pre>
-    </section>
+        <pre id="chat-error" class="error hidden"></pre>
+      </section>
 
-    <section class="panel">
-      <h2>模型清单 <span class="muted">（与 /v1/models 同源）</span></h2>
-      <table>
-        <thead><tr><th>模型</th><th>来源</th><th>归属</th><th>可用</th></tr></thead>
-        <tbody id="model-rows"></tbody>
-      </table>
-      <p class="muted" id="models-line"></p>
-    </section>
+      <section class="panel">
+        <h2>模型清单 <span class="muted">（与 /v1/models 同源）</span></h2>
+        <table>
+          <thead><tr><th>模型</th><th>来源</th><th>归属</th><th>可用</th></tr></thead>
+          <tbody id="model-rows"></tbody>
+        </table>
+        <p class="muted" id="models-line"></p>
+      </section>
+    </div>
 
-    <section class="panel">
-      <h2>语音引擎 <span class="muted">（TTS 轴，冻结保留）</span></h2>
-      <table>
-        <thead><tr><th>引擎</th><th>优先级</th><th>模型</th><th>状态</th></tr></thead>
-        <tbody id="engine-rows"></tbody>
-      </table>
-      <p class="muted" id="quota-line"></p>
-    </section>
+    <!-- ================= 语音轴（冻结） ================= -->
+    <div id="tab-tts" class="tab-view hidden">
+      <section class="panel">
+        <h2>语音引擎 <span class="tag muted-tag">冻结</span></h2>
+        <table>
+          <thead><tr><th>引擎</th><th>优先级</th><th>模型</th><th>状态</th></tr></thead>
+          <tbody id="engine-rows"></tbody>
+        </table>
+        <p class="muted" id="quota-line"></p>
+      </section>
 
-    <section class="panel">
-      <h2>语音合成</h2>
-      <form id="speech-form">
-        <div class="row">
-          <label>模型 <select id="f-model"></select></label>
-          <label>音色 <input id="f-voice" list="voice-list" value="zf_xiaoxiao" required>
-            <datalist id="voice-list">
-              <option value="zf_xiaoxiao"></option>
-              <option value="zf_xiaoyi"></option>
-              <option value="zm_yunjian"></option>
-              <option value="zm_yunxi"></option>
-            </datalist>
-          </label>
-          <label>格式 <select id="f-format">
-            <option value="wav">wav</option>
-            <option value="mp3">mp3</option>
-          </select></label>
-          <label>语速 <b id="speed-value">1.00</b>
-            <input type="range" id="f-speed" min="0.25" max="4" step="0.05" value="1">
-          </label>
+      <section class="panel">
+        <h2>语音合成</h2>
+        <form id="speech-form">
+          <div class="row">
+            <label>模型 <select id="f-model"></select></label>
+            <label>音色 <input id="f-voice" list="voice-list" value="zf_xiaoxiao" required>
+              <datalist id="voice-list">
+                <option value="zf_xiaoxiao"></option>
+                <option value="zf_xiaoyi"></option>
+                <option value="zm_yunjian"></option>
+                <option value="zm_yunxi"></option>
+              </datalist>
+            </label>
+            <label>格式 <select id="f-format">
+              <option value="wav">wav</option>
+              <option value="mp3">mp3</option>
+            </select></label>
+            <label>语速 <b id="speed-value">1.00</b>
+              <input type="range" id="f-speed" min="0.25" max="4" step="0.05" value="1">
+            </label>
+          </div>
+          <textarea id="f-text" rows="4" placeholder="输入要合成的文本…" required></textarea>
+          <div class="actions">
+            <button type="submit" id="synth-btn">合成语音</button>
+            <span id="synth-meta" class="muted"></span>
+          </div>
+        </form>
+        <div id="result" class="hidden">
+          <audio id="player" controls></audio>
+          <a id="download" class="ghost" download>下载</a>
         </div>
-        <textarea id="f-text" rows="4" placeholder="输入要合成的文本…" required></textarea>
-        <div class="actions">
-          <button type="submit" id="synth-btn">合成语音</button>
-          <span id="synth-meta" class="muted"></span>
-        </div>
-      </form>
-      <div id="result" class="hidden">
-        <audio id="player" controls></audio>
-        <a id="download" class="ghost" download>下载</a>
-      </div>
-      <pre id="error" class="error hidden"></pre>
-    </section>
+        <pre id="error" class="error hidden"></pre>
+      </section>
+    </div>
   </main>
 
-  <footer class="muted">model-router · OpenAI 兼容多渠道路由网关（语音轴冻结保留）· 状态页无需鉴权，/v1/* 需鉴权 · 锁定渠道用 X-Router-Pin 头</footer>
+  <footer class="muted">model-router · OpenAI 兼容多渠道路由网关 · 状态页无需鉴权，/v1/* 需鉴权 · 锁定渠道用 X-Router-Pin 头或 &lt;渠道id&gt;:&lt;模型名&gt; 前缀</footer>
 
   <script src="app.js"></script>
 </body>
