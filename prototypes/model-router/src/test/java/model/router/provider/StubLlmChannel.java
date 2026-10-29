@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /** 测试替身：一个只会报名字、不会真发请求的渠道。 */
-public final class StubLlmChannel implements LlmChannel {
+public class StubLlmChannel implements LlmChannel {
 
   private final String id;
   private final List<String> models;

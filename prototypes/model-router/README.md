@@ -11,6 +11,7 @@
 | `/v1/chat/completions` | 非流式 + SSE 流式透传；响应头 `X-Router-Channel` 告诉你这发走了谁 |
 | 5 个渠道 | `miku`（主档，`deepseek-v4.1-flash`）、`ark`（豆包）、`deepseek`、`mimo`（小米）、`miku-gpt`（旧 key，留作 503 故障样本） |
 | 别名降级 | `gpt-5.4-mini` → `miku-gpt` → `ark` → `mimo`，请求方只认一个名字，路由负责改写上游模型名 |
+| 显式锁渠道 | 头 `X-Router-Pin: ark` 或模型名前缀 `ark:doubao-seed-2.1-turbo`；调试/灰度/比效果时让自动选路让位给人（冷却中的渠道也照发） |
 | 熔断 | 瞬态失败（5xx/429/408/超时）计数开闸，冷却后半开放行，成功即清零；确定性失败（404/402/400）只换渠道不熔断 |
 | 启动期能力探测 | `GET /v1/models` 校准声明模型，key 没权益的模型直接摘掉 |
 | 成本账 | `data/usage.jsonl` 逐笔落盘，聚合用 `python ops/usage-report.py` |
@@ -58,7 +59,8 @@ python ../../ops/usage-report.py     # 成本聚合：按天 / 渠道 / 模型
 - LLM 侧配额 / 预算硬止损（TTS 侧有日字数配额，LLM 侧还没有）
 - 语义缓存、按延迟/错误率的动态权重选路、首 token 延迟纳入选路
 - 本地 LM Studio 兜底档（早期设计稿里写了，实际没做）
-- GLM / DashScope 渠道（key 已在 `.env`，未接入）
+- GLM / DashScope 渠道：`.env` 里那两个 key 实测是**占位符**（`your_zhipu_api_key_here` /
+  `your_dashscope_api_key_here`），端点返回 401，有真实 key 才能接
 
 ## 踩坑记录
 

@@ -66,7 +66,48 @@ public class ChatController {
       return;
     }
 
-    List<ChannelRegistry.ChannelTarget> targets = registry.candidates(model);
+    // 显式锁渠道：头 X-Router-Pin: <id>，或模型名写成 <渠道id>:<模型名>（如 ark:doubao-seed-2.1-turbo）。
+    // 调试、灰度、以及「同一个请求换供应商比效果」都靠它——PLAN 第 3 项里一直没做的那一块。
+    String pin = request == null ? null : request.getHeader("X-Router-Pin");
+    String effectiveModel = model;
+    if (pin == null && model.contains(":")) {
+      String[] parts = model.split(":", 2);
+      if (registry.channelById(parts[0]) != null) {
+        pin = parts[0];
+        effectiveModel = parts[1];
+      }
+    }
+
+    // 前缀只是寻址语法，不是模型名的一部分：账本和报错都记剥离后的名字
+    model = effectiveModel;
+
+    List<ChannelRegistry.ChannelTarget> targets;
+    if (pin != null) {
+      LlmChannel pinned = registry.channelById(pin);
+      if (pinned == null) {
+        response.setStatus(400);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write(
+            "{\"error\":{\"message\":\"unknown channel '" + pin + "'\""
+                + ",\"type\":\"invalid_request_error\"}}");
+        return;
+      }
+      String upstream = registry.resolveUpstream(pinned, effectiveModel);
+      if (upstream == null) {
+        response.setStatus(400);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write(
+            "{\"error\":{\"message\":\"channel " + pin + " cannot serve model " + effectiveModel
+                + "\",\"type\":\"invalid_request_error\"}}");
+        return;
+      }
+      // 锁了就锁了：即使这个渠道正在冷却也照试，否则「我就是要打它」这个诉求没法表达
+      targets = List.of(new ChannelRegistry.ChannelTarget(pinned, upstream));
+      log.info("channel pinned id={} model={} -> {}", pin, effectiveModel, upstream);
+    } else {
+      targets = registry.candidates(model);
+    }
+
     if (targets.isEmpty()) {
       response.setStatus(503);
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);

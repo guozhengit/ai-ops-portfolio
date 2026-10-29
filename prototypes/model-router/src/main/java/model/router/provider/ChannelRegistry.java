@@ -149,8 +149,17 @@ public class ChannelRegistry {
     return targets;
   }
 
+  /** 按 id 取渠道；用于「显式锁渠道」（调试 / 灰度 / 指定供应商比对）。 */
+  public LlmChannel channelById(String id) {
+    return bindings.stream()
+        .map(ChannelBinding::channel)
+        .filter(channel -> channel.id().equals(id))
+        .findFirst()
+        .orElse(null);
+  }
+
   /** 渠道直供该模型 → 原名；否则查别名表「渠道id:上游模型」。 */
-  private String resolveUpstream(LlmChannel channel, String requestedModel) {
+  public String resolveUpstream(LlmChannel channel, String requestedModel) {
     if (channel.supports(requestedModel)) {
       return requestedModel;
     }
