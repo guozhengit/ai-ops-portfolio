@@ -120,7 +120,38 @@ input[type="password"] { width: 260px; }
   align-items: center;
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 12px;
+}
+
+/* header 里的 key 输入框不占整行宽度 */
+.header-meta .key-row { margin-bottom: 0; }
+.header-meta .key-row input[type="password"] { width: 200px; padding: 6px 10px; }
+
+.card-note { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.card-note.warn-text { color: var(--warn); }
+
+.panel h2 .tag {
+  font-size: 11px;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 8px;
+  vertical-align: middle;
+}
+
+.row label.checkbox { display: flex; align-items: center; gap: 6px; }
+.row input[type="checkbox"] { width: auto; margin: 0; }
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  max-height: 320px;
+  overflow: auto;
 }
 
 .actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; }

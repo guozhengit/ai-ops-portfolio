@@ -13,6 +13,7 @@ import model.router.provider.ChannelRegistry;
 import model.router.provider.EngineRegistry;
 import model.router.provider.FakeEngine;
 import model.router.provider.StubLlmChannel;
+import model.router.service.ModelCatalog;
 import model.router.provider.ChannelRegistryTestSupport;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +33,7 @@ class ModelsControllerTest {
     ChannelProperties props = new ChannelProperties();
     props.setAliases(Map.of("gpt-5.4-mini", List.of("miku:deepseek-v4.1-flash", "ark:doubao")));
 
-    Map<String, Object> body = new ModelsController(engines, channels, props).models();
+    Map<String, Object> body = new ModelsController(new ModelCatalog(engines, channels, props)).models();
     List<Map<String, Object>> data = (List<Map<String, Object>>) body.get("data");
 
     assertEquals("list", body.get("object"));
@@ -60,7 +61,7 @@ class ModelsControllerTest {
     ChannelProperties props = new ChannelProperties();
     props.setAliases(Map.of("gpt-5.4-mini", List.of("ghost:gpt-5.4-mini")));
 
-    Map<String, Object> body = new ModelsController(engines, channels, props).models();
+    Map<String, Object> body = new ModelsController(new ModelCatalog(engines, channels, props)).models();
     List<Map<String, Object>> data = (List<Map<String, Object>>) body.get("data");
 
     assertFalse(data.stream().anyMatch(item -> "gpt-5.4-mini".equals(item.get("id"))),

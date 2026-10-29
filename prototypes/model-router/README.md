@@ -16,7 +16,7 @@
 | 启动期能力探测 | `GET /v1/models` 校准声明模型，key 没权益的模型直接摘掉 |
 | 成本账 | `data/usage.jsonl` 逐笔落盘，聚合用 `python ops/usage-report.py` |
 | `/v1/models` | 全站唯一清单：TTS 引擎 + LLM 渠道 + 别名三路合并，带 `kind`/`owners`/`available` |
-| `/ui/api/status` | `channels` 数组：优先级、模型、是否在冷却、价目是否已知 |
+| 控制台 `/` | 渠道健康（含今日调用/成本）+ 统一模型清单（与 `/v1/models` 同源）+ **LLM 试调**：真发一个请求，显示走了哪个渠道、耗时、tokens、成本（价目未知显示「未知」而不是 0） |
 
 规则细节见 `docs/routing-policy.md`，渠道实测数据见 `docs/channel-verification-miku-20261029.md`。
 

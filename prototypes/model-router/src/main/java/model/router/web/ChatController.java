@@ -127,8 +127,11 @@ public class ChatController {
         } else {
           LlmChannel.ChatResult result = channel.chat(body);
           registry.recordSuccess(channel.id());
-          journal.record(channel, model, target.upstreamModel(), result.promptTokens(),
-              result.completionTokens(), result.latencyMs(), false);
+          Double costUsd = journal.record(channel, model, target.upstreamModel(),
+              result.promptTokens(), result.completionTokens(), result.latencyMs(), false);
+          // 成本当场回给调用方：价目未知就写 unknown，不写 0
+          response.setHeader("X-Router-Cost-Usd",
+              costUsd == null ? "unknown" : String.valueOf(costUsd));
           response.setStatus(200);
           response.setContentType(MediaType.APPLICATION_JSON_VALUE);
           response.setHeader("X-Router-Channel", channel.id());

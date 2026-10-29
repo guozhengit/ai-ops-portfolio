@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 import model.router.config.RouterProperties;
 import model.router.provider.ChannelRegistry;
 import model.router.provider.EngineRegistry;
+import model.router.service.ModelCatalog;
+import model.router.service.UsageJournal;
 import model.router.service.AudioCache;
 import model.router.service.UsageLedger;
 
@@ -25,14 +27,19 @@ public class StatusController {
   private final AudioCache cache;
   private final RouterProperties properties;
   private final ChannelRegistry channels;
+  private final UsageJournal journal;
+  private final ModelCatalog catalog;
 
   public StatusController(EngineRegistry registry, UsageLedger ledger, AudioCache cache,
-      RouterProperties properties, ChannelRegistry channels) {
+      RouterProperties properties, ChannelRegistry channels, UsageJournal journal,
+      ModelCatalog catalog) {
     this.registry = registry;
     this.ledger = ledger;
     this.cache = cache;
     this.properties = properties;
     this.channels = channels;
+    this.journal = journal;
+    this.catalog = catalog;
   }
 
   @GetMapping("/status")
@@ -49,11 +56,22 @@ public class StatusController {
         })
         .toList();
 
-    List<Map<String, String>> models = registry.modelOwners().entrySet().stream()
-        .map(entry -> Map.of("id", entry.getKey(), "owned_by", entry.getValue()))
+    // 模型清单与 /v1/models 同源（ModelCatalog）：控制台看到的必须就是入口能用的那份
+    List<Map<String, Object>> models = catalog.entries().stream()
+        .map(item -> {
+          Map<String, Object> row = new LinkedHashMap<>();
+          row.put("id", item.id());
+          row.put("kind", item.kind());
+          row.put("owners", item.owners());
+          row.put("available", item.available());
+          return row;
+        })
         .toList();
 
-    // LLM 渠道健康：优先级、模型、是否在熔断冷却、价目是否已知（未知的成本账会记 null）
+    Map<String, UsageJournal.UsageSummary> byChannel = journal.todayByChannel();
+    UsageJournal.UsageSummary llmUsage = journal.today();
+
+    // LLM 渠道健康：优先级、模型、是否在熔断冷却、价目是否已知（未知的账单记 null）+ 今日用量
     List<Map<String, Object>> llmChannels = channels.statuses().stream()
         .map(status -> {
           Map<String, Object> item = new LinkedHashMap<>();
@@ -63,6 +81,13 @@ public class StatusController {
           item.put("available", status.available());
           item.put("cooldownUntil", status.cooldownUntil());
           item.put("priceKnown", status.priceKnown());
+          UsageJournal.UsageSummary usage = byChannel.get(status.id());
+          item.put("today", usage == null ? null : Map.of(
+              "calls", usage.calls(),
+              "promptTokens", usage.promptTokens(),
+              "completionTokens", usage.completionTokens(),
+              "knownCostUsd", usage.knownCostUsd(),
+              "unknownCostCalls", usage.unknownCostCalls()));
           return item;
         })
         .toList();
@@ -72,6 +97,13 @@ public class StatusController {
     payload.put("engines", engines);
     payload.put("channels", llmChannels);
     payload.put("models", models);
+    payload.put("llmUsage", Map.of(
+        "calls", llmUsage.calls(),
+        "promptTokens", llmUsage.promptTokens(),
+        "completionTokens", llmUsage.completionTokens(),
+        "knownCostUsd", llmUsage.knownCostUsd(),
+        "unknownCostCalls", llmUsage.unknownCostCalls()));
+    // 语音侧的用量（TTS 轴冻结保留，但账还是要给人看）
     payload.put("usage", ledger.totalsToday());
     payload.put("quota", Map.of(
         "enabled", properties.getQuota().isEnabled(),
