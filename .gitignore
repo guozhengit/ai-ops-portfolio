@@ -52,6 +52,7 @@ Thumbs.db
 # ===== 运行时产物 =====
 logs/
 *.pid
+data/
 data/cache/
 reports/local/
 .venv-chaos/

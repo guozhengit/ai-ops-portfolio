@@ -1,0 +1,23 @@
+server:
+  port: 8400          # 作品集实验室号段：8400 = self-healing-agent
+
+spring:
+  application:
+    name: self-healing-agent
+
+selfhealing:
+  agent:
+    enabled: false      # D10 起 AgentScope Team 就绪后切 true，LoggingDispatcher 随即退位
+  webhook:
+    # 生产必须用环境变量 SELFHEALING_WEBHOOK_TOKEN 覆盖（Key 治理纪律）
+    token: ${SELFHEALING_WEBHOOK_TOKEN:dev-token-change-me}
+  dedup:
+    ttl-minutes: 60
+  worker:
+    pool-size: 4
+  journal:
+    path: data/incidents.jsonl
+
+logging:
+  level:
+    com.guozhengit.selfhealing: INFO

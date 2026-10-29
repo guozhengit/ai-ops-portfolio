@@ -27,9 +27,30 @@ Alertmanager webhook ──> Agent 入口 ──> 诊断链路（MCP：查指标
   （随机 OOM 小应用）；hotel-booking / silver-guardian 为第二、三靶场
 - 故障场景 4-5 个：内存泄漏、慢 SQL、磁盘打满 + 连接池打满、Nacos 注册异常
 
-## 快速开始
+## 快速开始（D9：入口层已可运行）
 
-（W2 开发期补齐）
+```bash
+mvn package && java -jar target/self-healing-agent-0.1.0-SNAPSHOT.jar \
+    --server.port=8400 -Dselfhealing.webhook.token=$SELFHEALING_WEBHOOK_TOKEN
+# 或：SELFHEALING_WEBHOOK_TOKEN=xxx java -jar ... --server.port=8400
+
+curl -X POST http://localhost:8400/alerts/webhook \
+     -H "X-Webhook-Token: $SELFHEALING_WEBHOOK_TOKEN" -H "Content-Type: application/json" \
+     -d @alertmanager-sample.json
+```
+
+- 入口契约：令牌校验（常量时间比较）→ Alertmanager v2 payload 解析 →
+  fingerprint+status 去重（60min TTL）→ 异步转派 → 证据 JSONL 落盘
+  （`data/incidents.jsonl`，只追加不改写）
+- 快速返回 2xx，重活全异步；原始报文整体留档，证据链不丢信息
+- Alertmanager 侧接收器配置样例见 [deploy/alertmanager-receiver-sample.yml](deploy/alertmanager-receiver-sample.yml)
+- 转派目前是占位实现（LoggingDispatcher），D10 由 AgentScope harness Team 接管
+  （开关 `selfhealing.agent.enabled`）
+
+## 验证状态（D9）
+
+- 单测 7/7 绿（payload 解析 / dedupKey / 401 / 转派 / 去重 / 证据落盘）
+- 真实进程端到端冒烟通过：401×2 → 200 accepted → 重复 deduplicated → journal 四条决定齐全
 
 ## 验证方式（外部裁判，不许自评）
 
@@ -42,4 +63,8 @@ Alertmanager webhook ──> Agent 入口 ──> 诊断链路（MCP：查指标
 
 ## 踩坑记录
 
-（滚动补充）
+- **@ConditionalOnMissingBean 在普通 @Component 上不可靠**（2026-10-29 D9 冒烟发现）：
+  LoggingDispatcher 用它做「有真实现就退位」，结果主路径启动时条件评估顺序不定，
+  Dispatcher bean 缺失 → 应用起不来；而集成测试因 @Primary 测试替身一直是绿的。
+  修复：改显式属性开关 `selfhealing.agent.enabled`。——教训：测试替身掩盖装配问题，
+  真实进程冒烟必须做。

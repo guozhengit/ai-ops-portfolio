@@ -1,0 +1,23 @@
+# Alertmanager 侧接收器配置样例（160 上由运维人工采纳）
+# 说明：chaos-demo 的告警路由到自愈 Agent 入口；group_wait 30s 保证同组告警聚合。
+
+route:
+  receiver: self-healing-agent
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h          # Agent 侧有 60min TTL 去重，此处 4h 防风暴
+  routes:
+    - matchers:
+        - job="chaos-demo"
+      receiver: self-healing-agent
+
+receivers:
+  - name: self-healing-agent
+    webhook_configs:
+      - url: http://<self-healing-host>:8400/alerts/webhook
+        http_config:
+          http_headers:
+            X-Webhook-Token:
+              values: ["<SELFHEALING_WEBHOOK_TOKEN>"]   # 与 Agent 侧 .env 保持一致，勿明文入库
+        send_resolved: true       # resolved 也推送，Agent 可做「故障恢复」时间线
