@@ -1,41 +1,69 @@
-# 原型 2：多模型路由网关（呼应国内真实场景）
+# 原型 2：多模型路由网关（model-router）
 
-> **一句话价值**：按任务类型 / 成本 / 可用性，在「云端 6 家 + 本地 1 档」之间自动路由的
-> 轻量网关，带成本与质量统计面板。云端全挂或超预算时，本地 LM Studio 自动接管。
+一个 OpenAI 兼容的入口：`POST /v1/chat/completions` 进来，按「能力 → 优先级 → 单价 → 健康」选一个上游渠道发过去。渠道挂了自动降级，恢复了自动回来；每笔调用的成本落 JSONL 账本，**价目未知就记「未知」，不记 0**。
 
-## 架构图（占位）
+前身是 `D:\AI\tts-router`（多引擎 TTS 路由器），本目录是它 LLM 化的演进现场，原始 README 保留在 `README-tts-router-origin.md`。改造思路与验收门见 `PLAN.md`。
 
-```
-客户端（OpenAI 兼容入口）
-        │
-        v
-  路由决策（v1 规则路由：任务标签 / 能力分 / 价格表；v2 故障降级 + 重试超时）
-        │
-        ├── 智谱 GLM ──┐
-        ├── Qwen      ──┤
-        ├── DeepSeek  ──┤──> 计量（token / 价格 → 日报）
-        ├── 混元 / 豆包 / 小米 ──┘
-        └── LM Studio 本地档（fallback，Qwen3.5-9B @ localhost:1234/v1）
-```
+## 现在能干什么
 
-## 方案要点
+| 能力 | 说明 |
+| --- | --- |
+| `/v1/chat/completions` | 非流式 + SSE 流式透传；响应头 `X-Router-Channel` 告诉你这发走了谁 |
+| 5 个渠道 | `miku`（主档，`deepseek-v4.1-flash`）、`ark`（豆包）、`deepseek`、`mimo`（小米）、`miku-gpt`（旧 key，留作 503 故障样本） |
+| 别名降级 | `gpt-5.4-mini` → `miku-gpt` → `ark` → `mimo`，请求方只认一个名字，路由负责改写上游模型名 |
+| 熔断 | 瞬态失败（5xx/429/408/超时）计数开闸，冷却后半开放行，成功即清零；确定性失败（404/402/400）只换渠道不熔断 |
+| 启动期能力探测 | `GET /v1/models` 校准声明模型，key 没权益的模型直接摘掉 |
+| 成本账 | `data/usage.jsonl` 逐笔落盘，聚合用 `python ops/usage-report.py` |
+| `/v1/models` | 全站唯一清单：TTS 引擎 + LLM 渠道 + 别名三路合并，带 `kind`/`owners`/`available` |
+| `/ui/api/status` | `channels` 数组：优先级、模型、是否在冷却、价目是否已知 |
 
-- **骨架**：直接改造 `D:\AI\tts-router`（Java 21 + Spring Boot 3.5，已实现鉴权 / 配额 /
-  计量 / 缓存 / 选路 / 降级）——把「TTS 引擎侧」替换为「LLM 供应商侧」即可，起步 2-3 天
-- 架构参考：`D:\AI\sub2api`（Go 版 AI API 网关的配额 / 计费模式）
-- 供应商配置见 `config/providers.example.yaml`（价格表 + 能力分，Key 走 .env 注入）
-- 本地降级档为**必做**：health-check + 自动切换，这是最有面试讲头的混合拓扑
+规则细节见 `docs/routing-policy.md`，渠道实测数据见 `docs/channel-verification-miku-20261029.md`。
 
 ## 快速开始
 
-（W3 开发期补齐）
+```bash
+# key 只走环境变量，仓库根 .env 是 gitignored 的
+set -a; . ../../.env; set +a
 
-## 验证方式（外部裁判）
+mvn package
+java -jar target/model-router-0.1.0-SNAPSHOT.jar --server.port=8410
 
-- 一组 20 条固定测试请求，对比「单模型直连 vs 路由后」的成本与质量评分，出对比表
-- 专项测试：「拔掉全部云端 Key」验证本地档自动接管
-- 本地基准：记录 Qwen3.5-9B 本机 tokens/s、显存、并发（W5 实验数据回填文章）
+# 非流式
+curl -X POST http://127.0.0.1:8410/v1/chat/completions \
+  -H "Authorization: Bearer sk-local-dev-key" -H "Content-Type: application/json" \
+  -d '{"model":"deepseek-v4.1-flash","messages":[{"role":"user","content":"say ok"}]}'
+
+# 流式（加了 -N 才能看到逐帧输出）
+curl -N -X POST http://127.0.0.1:8410/v1/chat/completions \
+  -H "Authorization: Bearer sk-local-dev-key" -H "Content-Type: application/json" \
+  -d '{"model":"deepseek-v4.1-flash","messages":[{"role":"user","content":"say ok"}],"stream":true}'
+
+python ../../ops/usage-report.py     # 成本聚合：按天 / 渠道 / 模型
+```
+
+两个环境坑：终端里配了 `HTTP_PROXY` 的话，curl 打 localhost 会被代理吃掉（返回假的 502），要加 `--noproxy '*'`；用 `&` 起的 java 进程会随 shell 调用结束被回收，起服务请用受管的后台任务。
+
+## 验证到什么程度
+
+- **47 个测试全绿 + CI 绿**
+- **恢复演练**（`ChannelRecoveryTest`）：本地 HttpServer 造一个「先坏后好」的渠道，走真实 HTTP 验证
+  连 503 → 开闸 → 冷却期内被跳过 → 半开放行成功 → 回到主档。**只会降级不会恢复的熔断器等于把渠道一次性判死刑**，所以这条单独测。
+- **真流量三条路径**：`deepseek-v4.1-flash` → 200 走 miku 主档；`gpt-5.4-mini` → miku-gpt 失败后落 ark 200；
+  `gpt-5.2` → 502，body 里带逐渠道失败原因。
+- **真实故障样本**：miku 新 key 的 gpt-5.x 全 404（key 没权益）、miku 旧 key 的 gpt-5.4-mini 持续 503、
+  deepseek 真 402（余额），三条都是线上撞出来的，不是 mock。
+
+## 还没做的
+
+- LLM 侧配额 / 预算硬止损（TTS 侧有日字数配额，LLM 侧还没有）
+- 语义缓存、按延迟/错误率的动态权重选路、首 token 延迟纳入选路
+- 本地 LM Studio 兜底档（早期设计稿里写了，实际没做）
+- GLM / DashScope 渠道（key 已在 `.env`，未接入）
 
 ## 踩坑记录
 
-（滚动补充）
+- **中转渠道的可用模型跟着 key 走**。同一个 base-url 换把 key，权益可能完全不相交——写死模型清单只会在请求期稳定吃 404，所以要有启动期探测。
+- **探测失败不能误杀渠道**。ark 的 `/api/plan/v3/models` 探测不通，若按「不符就禁用」会摘掉一个正常渠道；现在的规则是部分不符才摘，全部不符保守保留。
+- **价目未知记 0 等于编造假账**。第三方中转没有公开价目，记 0 就是把「不知道」写成「免费」。
+- **流式没有头可用**。token 数只在最后一个 SSE 帧里，得旁路抄表（`SseUsageStream`），传完再落账。
+- **相同路径的两个 mapping 会撞**（当年 `/v1/models` 的 Ambiguous mapping），模型清单这类聚合端点要收口到一个控制器。
