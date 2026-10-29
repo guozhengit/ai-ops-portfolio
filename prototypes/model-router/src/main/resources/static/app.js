@@ -300,7 +300,6 @@ $('chat-form').addEventListener('submit', async (ev) => {
         stream,
       }),
     });
-    const elapsed = Math.round(performance.now() - started);
     const channel = res.headers.get('X-Router-Channel') || '未知';
     const cost = res.headers.get('X-Router-Cost-Usd');
 
@@ -324,20 +323,60 @@ $('chat-form').addEventListener('submit', async (ev) => {
     let content = '';
     let usage = null;
     if (stream) {
-      const text = await res.text();
-      const frames = text.split('\n').filter((l) => l.startsWith('data: '));
-      // 流式没有响应头的成本（要等尾帧），这里如实说明，不猜
-      content = frames.map((f) => {
-        try {
-          return JSON.parse(f.slice(6)).choices?.[0]?.delta?.content || '';
-        } catch (e) {
-          return '';
+      // 真·流式渲染：逐 chunk 读、逐帧解析、正文实时上屏。
+      // 之前 await res.text() 收完再渲染——勾了「流式」却整段一次性蹦出来，
+      // 流式到底通没通在 UI 上完全看不出来。
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let frames = 0;
+      let reasoningChars = 0;
+      $('chat-content').textContent = '';
+      $('chat-result').classList.remove('hidden');
+      // 推理模型（deepseek-v4.1-flash 等）前段帧是 reasoning_content，正文要等推理
+      // 结束才来：把进度摆出来，别让页面干等时看起来像死了
+      const renderStream = () => {
+        if (content) {
+          $('chat-content').textContent = content;
+        } else {
+          $('chat-content').textContent = reasoningChars
+            ? '（模型推理中：已产出 ' + reasoningChars + ' 字思考，正文稍后）'
+            : '（等待首个数据帧…）';
         }
-      }).join('');
+      };
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop(); // 跨 chunk 的半行留到下一轮
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          frames++;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const delta = JSON.parse(payload).choices?.[0]?.delta || {};
+            if (delta.reasoning_content) reasoningChars += delta.reasoning_content.length;
+            if (delta.content) content += delta.content;
+          } catch (e) { /* 坏帧跳过，不拖垮整个流 */ }
+        }
+        renderStream();
+      }
+      const elapsed = Math.round(performance.now() - started);
+      // max_tokens 被推理吃光时正文是空的：明示原因，别只写「无内容」
+      $('chat-content').textContent = content
+        || (reasoningChars
+          ? '（正文为空：推理已产出 ' + reasoningChars + ' 字，但 max_tokens='
+            + $('c-max-tokens').value + ' 被思考吃光，没有余量生成正文——调大再试）'
+          : '（上游未返回正文）');
       $('chat-route').innerHTML = '渠道 <code>' + esc(channel) + '</code>'
-        + (pin ? '（已锁定）' : '（自动选路）') + ' · ' + frames.length
-        + ' 帧 · ' + elapsed + 'ms · 流式成本见账本（<code>ops/usage-report.py</code>）';
+        + (pin ? '（已锁定）' : '（自动选路）') + ' · ' + frames
+        + ' 帧 · ' + elapsed + 'ms'
+        + (reasoningChars ? ' · 含推理 ' + reasoningChars + ' 字' : '')
+        + ' · 流式成本见账本（<code>ops/usage-report.py</code>）';
     } else {
+      const elapsed = Math.round(performance.now() - started);
       const body = await res.json();
       content = body.choices?.[0]?.message?.content || '';
       usage = body.usage;
@@ -349,8 +388,7 @@ $('chat-form').addEventListener('submit', async (ev) => {
           : '<span class="pill warn">价目未知</span>');
     }
 
-    $('chat-content').textContent = content || '（无内容）';
-    $('chat-result').classList.remove('hidden');
+    if (!stream) $('chat-result').classList.remove('hidden');
     loadStatus();
   } catch (e) {
     $('chat-error').textContent = '请求失败：' + e.message;

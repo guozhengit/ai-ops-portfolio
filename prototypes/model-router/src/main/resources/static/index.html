@@ -65,7 +65,8 @@
               <input id="c-model" list="c-model-list" placeholder="选一个或手输模型名">
               <datalist id="c-model-list"></datalist>
             </label>
-            <label>最大 tokens <input id="c-max-tokens" type="number" min="1" max="4096" value="64" style="width:90px"></label>
+            <!-- 推理模型（deepseek-v4.1-flash）的思考也计入 max_tokens，64 会被吃光导致正文为空 -->
+            <label>最大 tokens <input id="c-max-tokens" type="number" min="1" max="4096" value="512" style="width:90px"></label>
             <label class="checkbox"><input id="c-stream" type="checkbox"> 流式（SSE）</label>
           </div>
           <textarea id="c-prompt" rows="3" placeholder="输入 prompt…">用一句话说明什么是熔断降级。</textarea>
