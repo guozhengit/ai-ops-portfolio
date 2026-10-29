@@ -1,0 +1,9 @@
+target/
+.cache/
+data/
+.tmp/
+ttsrouter-data*.mv.db
+ttsrouter-data*.trace.db
+*.log
+.idea/
+*.iml

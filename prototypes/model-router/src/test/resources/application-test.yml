@@ -1,0 +1,12 @@
+# 测试专用配置：内存 H2（不碰开发库）、独立缓存目录，引擎用 dev profile 的假引擎
+spring:
+  datasource:
+    url: jdbc:h2:mem:ttsrouter_test;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+
+tts:
+  api-keys:
+    - sk-test-key
+  cache:
+    directory: target/test-cache

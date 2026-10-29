@@ -1,0 +1,24 @@
+# 生产/自用示例：VPS 上只跑路由器，引擎走家里的 GPU 侧车和 Edge 兜底。
+# 启动：mvn spring-boot:run -Dspring-boot.run.prod ... 或 java -jar app.jar --spring.profiles.active=prod
+tts:
+  api-keys:
+    - sk-change-me
+  quota:
+    enabled: true
+    daily-chars: 500000
+  engines:
+    - id: kokoro-local
+      base-url: http://10.8.0.20:8081
+      priority: 10
+      timeout: 30s
+      max-input-chars: 2000
+      models:
+        - kokoro-zh
+    - id: edge-sidecar
+      base-url: http://10.8.0.10:8082
+      priority: 20
+      timeout: 15s
+      max-input-chars: 4096
+      models:
+        - kokoro-zh
+        - edge-zh

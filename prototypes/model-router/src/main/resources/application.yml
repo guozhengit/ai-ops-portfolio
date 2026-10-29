@@ -1,0 +1,40 @@
+server:
+  port: 17777
+
+spring:
+  application:
+    name: tts-router
+  profiles:
+    active: dev
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:h2:file:./ttsrouter-data
+    username: sa
+    password: ""
+  sql:
+    init:
+      mode: always
+
+tts:
+  api-keys:
+    - sk-local-dev-key
+  quota:
+    enabled: true
+    daily-chars: 200000
+  cache:
+    enabled: true
+    directory: .cache/audio
+    max-bytes: 536870912
+  health:
+    failure-threshold: 2
+    cooldown: 60s
+  split:
+    enabled: true
+    max-total-chars: 100000
+  audio:
+    ffmpeg-path: D:/Program Files/ffmpeg/bin/ffmpeg.exe
+    mp3-bitrate: 128k
+    timeout: 30s
+  engines: []

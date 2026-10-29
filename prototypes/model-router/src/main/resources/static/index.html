@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tts-router 控制台</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🎧 tts-router</h1>
+    <div class="header-meta">
+      <span id="service-state" class="pill">加载中…</span>
+      <button id="refresh-btn" class="ghost" type="button">刷新状态</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="grid">
+      <div class="card"><div class="card-label">今日请求</div><div class="card-value" id="stat-requests">–</div></div>
+      <div class="card"><div class="card-label">今日字符</div><div class="card-value" id="stat-chars">–</div></div>
+      <div class="card"><div class="card-label">缓存命中</div><div class="card-value" id="stat-cached">–</div></div>
+      <div class="card"><div class="card-label">缓存占用</div><div class="card-value" id="stat-cache">–</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>引擎</h2>
+      <table>
+        <thead><tr><th>引擎</th><th>优先级</th><th>模型</th><th>状态</th></tr></thead>
+        <tbody id="engine-rows"></tbody>
+      </table>
+      <p class="muted" id="quota-line"></p>
+    </section>
+
+    <section class="panel">
+      <h2>语音合成</h2>
+      <form id="speech-form">
+        <div class="row">
+          <label>模型 <select id="f-model"></select></label>
+          <label>音色 <input id="f-voice" list="voice-list" value="zf_xiaoxiao" required>
+            <datalist id="voice-list">
+              <option value="zf_xiaoxiao"></option>
+              <option value="zf_xiaoyi"></option>
+              <option value="zm_yunjian"></option>
+              <option value="zm_yunxi"></option>
+            </datalist>
+          </label>
+          <label>格式 <select id="f-format">
+            <option value="wav">wav</option>
+            <option value="mp3">mp3</option>
+          </select></label>
+          <label>语速 <b id="speed-value">1.00</b>
+            <input type="range" id="f-speed" min="0.25" max="4" step="0.05" value="1">
+          </label>
+        </div>
+        <label class="key-row" id="key-row">API Key
+          <input type="password" id="f-key" placeholder="sk-..." autocomplete="off">
+        </label>
+        <textarea id="f-text" rows="4" placeholder="输入要合成的文本…" required></textarea>
+        <div class="actions">
+          <button type="submit" id="synth-btn">合成语音</button>
+          <span id="synth-meta" class="muted"></span>
+        </div>
+      </form>
+      <div id="result" class="hidden">
+        <audio id="player" controls></audio>
+        <a id="download" class="ghost" download>下载</a>
+      </div>
+      <pre id="error" class="error hidden"></pre>
+    </section>
+  </main>
+
+  <footer class="muted">tts-router · OpenAI 兼容多引擎 TTS 路由器 · 状态页无需鉴权，合成走 /v1/* 鉴权</footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
