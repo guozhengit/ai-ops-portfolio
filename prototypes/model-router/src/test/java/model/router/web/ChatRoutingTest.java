@@ -37,6 +37,7 @@ class ChatRoutingTest {
     private final Double priceIn;
     private final Double priceOut;
     volatile String lastBody;
+    volatile String streamBody = "data: [DONE]\n\n";
 
     FakeChannel(String id, List<String> models, ChannelException onChat, String body) {
       this(id, models, onChat, body, 1.0, 2.0);
@@ -89,7 +90,7 @@ class ChatRoutingTest {
     @Override
     public StreamedChat chatStream(String rawBody) {
       lastBody = rawBody;
-      return new StreamedChat(id, new ByteArrayInputStream("data: [DONE]\n\n"
+      return new StreamedChat(id, new ByteArrayInputStream(streamBody
           .getBytes(StandardCharsets.UTF_8)), "text/event-stream");
     }
   }
@@ -193,6 +194,30 @@ class ChatRoutingTest {
     assertTrue(line.contains("\"costUsd\":null"), "价目未知应记 null：" + line);
     assertTrue(line.contains("\"costKnown\":false"), "应明确标注成本不可知：" + line);
     assertTrue(line.contains("\"promptTokens\":1000000"), "token 数照实记：" + line);
+  }
+
+  @Test
+  void streamRecordsUsageFromTailFrame() throws Exception {
+    // 流式没有响应头，token 数只在最后那一帧：必须抄下来落账，不能写成 0
+    FakeChannel healthy = new FakeChannel("healthy", List.of("m1"), null, "{}");
+    healthy.streamBody = "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}],\"usage\":null}\n\n"
+        + "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],"
+        + "\"usage\":{\"prompt_tokens\":1000,\"completion_tokens\":500}}\n\n"
+        + "data: [DONE]\n\n";
+    ChannelProperties props = properties();
+    ChannelRegistry registry = ChannelRegistryTestSupport.registryOf(2, healthy);
+    ChatController controller = new ChatController(registry, new UsageJournal(props));
+
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    controller.chat("{\"model\":\"m1\",\"messages\":[],\"stream\":true}", null, response);
+
+    assertEquals(200, response.getStatus());
+    String line = Files.readString(Path.of(props.getUsagePath())).trim();
+    assertTrue(line.contains("\"stream\":true"), "应标记为流式调用：" + line);
+    assertTrue(line.contains("\"promptTokens\":1000"), "尾帧 usage 应抄进账本：" + line);
+    assertTrue(line.contains("\"completionTokens\":500"), line);
+    // 1k in × $1 + 0.5k out × $2 = $0.002
+    assertTrue(line.contains("\"costUsd\":0.002"), "流式也要能算出成本：" + line);
   }
 
   private ChannelProperties properties() {

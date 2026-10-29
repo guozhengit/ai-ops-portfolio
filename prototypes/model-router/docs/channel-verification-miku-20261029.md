@@ -91,5 +91,9 @@
       `gpt-5.2` → 只有 miku-gpt 支持 → 502，body 带逐渠道失败原因
 - [x] 账本实证：`{"channel":"miku","promptTokens":37,"completionTokens":37,
       "costUsd":null,"costKnown":false}`
-- [ ] 把 404 / 503 两条路径固化成自动化测试（当前靠线上真故障撞）
-- [ ] SSE 尾帧 usage 精确计费（实测该渠道 usage 在 `finish_reason: stop` 那一帧，可解析）
+- [x] 404 / 503 固化成自动化测试：`HttpChannelStatusTest` 用本地 HttpServer 打真实状态码，
+      断言 404/400/401/402 → 确定性（不熔断），500/502/503/429/408 → 瞬态（计数开闸）
+- [x] SSE 尾帧 usage 精确计费：新增 `SseUsageStream` 旁路抄表（字节原样透传，顺手记下 usage）。
+      真流量实证：263 帧 / 74KB 流式响应 → 账本行
+      `{"channel":"miku","promptTokens":35,"completionTokens":262,"costUsd":null,"costKnown":false,"latencyMs":7251,"stream":true}`
+      ——token 精确了，成本依然是 null：价目未知这件事不会因为 token 数知道了就变得已知。

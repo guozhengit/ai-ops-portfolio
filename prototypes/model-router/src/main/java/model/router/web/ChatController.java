@@ -13,6 +13,7 @@ import java.util.TreeSet;
 import model.router.provider.ChannelException;
 import model.router.provider.ChannelRegistry;
 import model.router.provider.LlmChannel;
+import model.router.provider.SseUsageStream;
 import model.router.service.UsageJournal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,18 +123,22 @@ public class ChatController {
 
   private void streamToResponse(LlmChannel channel, String rawBody, String requestedModel,
                                 String upstreamModel, HttpServletResponse response) throws Exception {
+    long startedAt = System.currentTimeMillis();
     LlmChannel.StreamedChat streamed = channel.chatStream(rawBody);
     registry.recordSuccess(channel.id());
-    // 流式响应的 usage 在最后一个 SSE chunk 里，这里按 0 成本记账并标注 stream=true；
-    // 精确计费从 SSE 尾帧解析 usage，属于下一步增强
-    journal.record(channel, requestedModel, upstreamModel, null, null, 0, true);
+    // 流式没有响应头可用：token 数在最后一个 SSE 帧里，边透传边抄表，传完再落账
+    SseUsageStream tracked = new SseUsageStream(streamed.stream());
     response.setStatus(200);
     response.setContentType(streamed.contentType());
     response.setHeader("X-Router-Channel", streamed.channel());
-    try (InputStream in = streamed.stream(); OutputStream out = response.getOutputStream()) {
+    try (InputStream in = tracked; OutputStream out = response.getOutputStream()) {
       in.transferTo(out);
       out.flush();
     }
+    journal.record(channel, requestedModel, upstreamModel, tracked.promptTokens(),
+        tracked.completionTokens(), System.currentTimeMillis() - startedAt, true);
+    log.info("stream recorded channel={} model={} promptTokens={} completionTokens={}",
+        channel.id(), upstreamModel, tracked.promptTokens(), tracked.completionTokens());
   }
 
   // /v1/models 由 SpeechController 提供（TTS 时代遗留的聚合端点）；
