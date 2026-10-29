@@ -68,6 +68,11 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
     private final Path reportsDir;
     private final ApprovalStore approvals;
     private final ActionExecutor executor;
+    private final String fallbackApiKey;
+    private final String fallbackBaseUrl;
+    private final String fallbackModel;
+    private final int retryMaxAttempts;
+    private final long retryBackoffMs;
 
     public AgentTeamDispatcher(
             @Value("${selfhealing.agent.api-key}") String apiKey,
@@ -78,7 +83,12 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
             @Value("${selfhealing.chaos.base-url}") String chaosBaseUrl,
             @Value("${selfhealing.reports-dir:reports}") String reportsDir,
             ApprovalStore approvals,
-            ActionExecutor executor) {
+            ActionExecutor executor,
+            @Value("${selfhealing.agent.fallback.api-key:}") String fallbackApiKey,
+            @Value("${selfhealing.agent.fallback.base-url:}") String fallbackBaseUrl,
+            @Value("${selfhealing.agent.fallback.model:}") String fallbackModel,
+            @Value("${selfhealing.agent.retry.max-attempts:3}") int retryMaxAttempts,
+            @Value("${selfhealing.agent.retry.backoff-ms:2000}") long retryBackoffMs) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("诊断模型未配置：请通过 AGENT_API_KEY / ARK_API_KEY 环境变量提供");
         }
@@ -91,6 +101,11 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
         this.reportsDir = Path.of(reportsDir);
         this.approvals = approvals;
         this.executor = executor;
+        this.fallbackApiKey = fallbackApiKey;
+        this.fallbackBaseUrl = fallbackBaseUrl;
+        this.fallbackModel = fallbackModel;
+        this.retryMaxAttempts = retryMaxAttempts;
+        this.retryBackoffMs = retryBackoffMs;
     }
 
     @Override
@@ -100,13 +115,52 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
         long start = System.currentTimeMillis();
         log.info("[diag] 开始诊断 alert={} fingerprint={} team={}", alert.alertName(), fp, teamName);
         try {
-            String report = runTeam(teamName, alert);
-            Path saved = saveReport(fp, alert, report);
+            String report;
+            boolean degraded = false;
+            try {
+                report = runTeam(teamName, alert, apiKey, baseUrl, modelName);
+            } catch (Exception primaryEx) {
+                if (fallbackApiKey == null || fallbackApiKey.isBlank()) {
+                    throw primaryEx;
+                }
+                degraded = true;
+                log.warn("[diag] primary 模型({})整场失败，降级 fallback({})：{}",
+                        modelName, fallbackModel, primaryEx.toString());
+                report = runTeam(teamName + "-fb", alert, fallbackApiKey, fallbackBaseUrl, fallbackModel);
+            }
+            Path saved = saveReport(fp, alert, report, degraded);
             log.info("[diag] 诊断完成（{}ms），报告已落盘: {}", System.currentTimeMillis() - start, saved);
             proposeActions(fp, alert.alertName(), saved, report);
         } catch (Exception e) {
             log.error("[diag] 诊断失败 alert={}: {}", fp, e.toString(), e);
         }
+    }
+
+    /** 单次 LLM 调用重试：指数退避（backoff * 2^i），用尽后抛出交由上层降级。 */
+    private Msg callWithRetry(ReActAgent agent, String prompt, Duration timeout) throws InterruptedException {
+        RuntimeException last = null;
+        for (int attempt = 1; attempt <= retryMaxAttempts; attempt++) {
+            try {
+                return agent.call(prompt).block(timeout);
+            } catch (RuntimeException ex) {
+                last = ex;
+                log.warn("[diag] LLM 调用失败（第 {}/{} 次）：{}", attempt, retryMaxAttempts,
+                        ex.getClass().getSimpleName() + ": " + rootMessage(ex));
+                if (attempt < retryMaxAttempts) {
+                    Thread.sleep(retryBackoffMs * (1L << (attempt - 1)));
+                }
+            }
+        }
+        throw last;
+    }
+
+    private static String rootMessage(Throwable t) {
+        Throwable cur = t;
+        while (cur.getCause() != null && cur.getCause() != cur) {
+            cur = cur.getCause();
+        }
+        String m = cur.getMessage();
+        return m == null ? cur.getClass().getSimpleName() : m.substring(0, Math.min(160, m.length()));
     }
 
     /**
@@ -126,7 +180,7 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
                     + "{\"description\":\"动作描述\",\"risk\":\"low|medium|high\",\"executable_command\":\"...\"}\n"
                     + "executable_command 只能取 chaos:off:<scene>（scene ∈ memory-leak|slow-sql|disk-full|pool-exhaustion|nacos-flap）"
                     + "或 null（无安全执行通道）。最多 5 项。\n\n报告：\n" + reportText;
-            Msg r = extractor.call(prompt).block(Duration.ofMinutes(3));
+            Msg r = callWithRetry(extractor, prompt, Duration.ofMinutes(3));
             String text = r != null ? r.getTextContent() : "";
             int s = text.indexOf('[');
             int e = text.lastIndexOf(']');
@@ -168,7 +222,8 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
     }
 
     /** 搭建一次性诊断 Team 并跑完编排循环，返回 lead 的最终报告文本。 */
-    private String runTeam(String teamName, AlertPayloads.AlertItem alert) throws Exception {
+    private String runTeam(String teamName, AlertPayloads.AlertItem alert,
+                           String apiKey, String baseUrl, String modelName) throws Exception {
         BaseStore store = new InMemoryStore();
         TeamClient client = new LocalTeamClient(store);
         String objective = "诊断告警 " + alert.alertName() + "（fingerprint=" + alert.fingerprint()
@@ -181,8 +236,7 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
                         new TeamMemberSpec("remedy", "remedy-planner", "修复方案 worker", "byo"))))
                 .block(Duration.ofSeconds(10));
 
-        Model model = OpenAIChatModel.builder()
-                .apiKey(apiKey).baseUrl(baseUrl).modelName(modelName).stream(true).build();
+        Model model = model(apiKey, baseUrl, modelName);
 
         ReActAgent lead = buildMember(client, teamName, "lead",
                 "你是诊断团队 lead。目标：" + objective
@@ -190,24 +244,24 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
                         + "观测原文给 logs、修复方案给 remedy；所有任务 settled 后，调用 completeTeam 之前，"
                         + "先汇总产出最终 Markdown 诊断报告（结构：## 结论 / ## 证据链（引用各任务 result 原文）/ "
                         + "## 修复建议（动作/风险/是否需人工审批）/ ## 后续观察项），把报告全文作为你的回复输出。",
-                null, null);
+                null, null, model);
         ReActAgent metrics = buildMember(client, teamName, "metrics",
                 "你是指标分析 worker。listClaimableTasks 找到你的任务后 claimTask，"
                         + "用 prom_query 工具对告警相关指标做 PromQL 查询取证据（可选指标前缀 chaos_），"
                         + "再调用 chaos_status 看靶场当前状态，把发现写进 completeTask。",
-                null, new PromTools.PromQueryTool(prometheusUrl, chaosBaseUrl));
+                null, new PromTools.PromQueryTool(prometheusUrl, chaosBaseUrl), model);
         ReActAgent logs = buildMember(client, teamName, "logs",
                 "你是观测数据 worker。listClaimableTasks 找到你的任务后 claimTask，"
                         + "用 chaos_metrics 工具拉取靶场指标原文作为数据证据，把关键行摘录写进 completeTask。",
-                null, new PromTools.ChaosMetricsTool(chaosBaseUrl));
+                null, new PromTools.ChaosMetricsTool(chaosBaseUrl), model);
         ReActAgent remedy = buildMember(client, teamName, "remedy",
                 "你是修复方案 worker。listClaimableTasks 找到你的任务后 claimTask，"
                         + "基于队友写入白板的证据产出结构化建议（每条含：动作/预期效果/风险等级/是否需人工审批），"
                         + "写进 completeTask。只做方案，不执行。",
-                null, null);
+                null, null, model);
 
         // Round 0：lead 拆派
-        lead.call("目标：" + objective).block(Duration.ofMinutes(4));
+        callWithRetry(lead, "目标：" + objective, Duration.ofMinutes(4));
         // 兜底：lead 没建任务就程序化建，保证流程可继续
         if (client.listTasks("default", teamName).block(Duration.ofSeconds(10)).isEmpty()) {
             client.createTask("default", teamName, "取证：相关指标查询", "用 prom_query / chaos_status 取证据", List.of(), "metrics").block();
@@ -217,17 +271,18 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
         String summary = "";
         for (int round = 1; round <= maxRounds; round++) {
             log.info("[diag] round {} worker 执行", round);
-            metrics.call("继续执行团队分配给你的任务。").block(Duration.ofMinutes(4));
-            logs.call("继续执行团队分配给你的任务。").block(Duration.ofMinutes(4));
-            remedy.call("继续执行团队分配给你的任务。").block(Duration.ofMinutes(4));
+            callWithRetry(metrics, "继续执行团队分配给你的任务。", Duration.ofMinutes(4));
+            callWithRetry(logs, "继续执行团队分配给你的任务。", Duration.ofMinutes(4));
+            callWithRetry(remedy, "继续执行团队分配给你的任务。", Duration.ofMinutes(4));
             if (allTerminal(client, teamName)) {
                 log.info("[diag] round {} 白板全结算，lead 生成报告", round);
-                Msg r = lead.call("所有任务已 settled。请汇总产出最终 Markdown 诊断报告并 completeTeam，报告全文作为回复输出。")
-                        .block(Duration.ofMinutes(5));
+                Msg r = callWithRetry(lead, "所有任务已 settled。请汇总产出最终 Markdown 诊断报告并 completeTeam，报告全文作为回复输出。",
+                        Duration.ofMinutes(5));
                 summary = r != null ? r.getTextContent() : "";
                 break;
             }
-            Msg r = lead.call("查看白板：若所有任务已 settled，请汇总结论并 completeTeam；否则继续派发或催办。").block(Duration.ofMinutes(4));
+            Msg r = callWithRetry(lead, "查看白板：若所有任务已 settled，请汇总结论并 completeTeam；否则继续派发或催办。",
+                    Duration.ofMinutes(4));
             if (r != null && allTerminal(client, teamName)) {
                 summary = r.getTextContent();
                 break;
@@ -246,7 +301,7 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
     }
 
     private ReActAgent buildMember(TeamClient client, String team, String role, String sysPrompt,
-                                   TeamContext ctxPlaceholder, Object workerTool) {
+                                   TeamContext ctxPlaceholder, Object workerTool, Model model) {
         TeamContext ctx = new TeamContext(team, "default",
                 "诊断目标见 team objective", role, "lead".equals(role), null, null);
         TeamsMiddleware mw = new TeamsMiddleware(client, ctx);
@@ -258,18 +313,22 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
         return ReActAgent.builder()
                 .name(role)
                 .sysPrompt(sysPrompt)
-                .model(model())
+                .model(model)
                 .toolkit(tk)
                 .middlewares(List.of(mw))
                 .build();
     }
 
     private Model model() {
+        return model(apiKey, baseUrl, modelName);
+    }
+
+    private static Model model(String apiKey, String baseUrl, String modelName) {
         return OpenAIChatModel.builder()
                 .apiKey(apiKey).baseUrl(baseUrl).modelName(modelName).stream(true).build();
     }
 
-    private Path saveReport(String fp, AlertPayloads.AlertItem alert, String report) throws Exception {
+    private Path saveReport(String fp, AlertPayloads.AlertItem alert, String report, boolean degraded) throws Exception {
         Files.createDirectories(reportsDir);
         String file = "incident-" + Instant.now().toString().replace(":", "").replace("-", "")
                 + "-" + fp + ".md";
@@ -278,7 +337,12 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
                 + "- severity: " + alert.labels().getOrDefault("severity", "?") + "\n"
                 + "- 告警摘要: " + alert.annotations().getOrDefault("summary", "") + "\n"
                 + "- 生成时间: " + Instant.now() + "\n"
-                + "- 诊断模型: " + modelName + "（团队编排：lead/metrics/logs/remedy）\n\n---\n\n";
+                + "- 诊断模型: " + modelName + "（团队编排：lead/metrics/logs/remedy）\n"
+                + (degraded
+                        ? "- ⚠️ **降级标记**：主模型（" + modelName + "）本场多次重试后失败，本次报告由 fallback 模型（"
+                                + fallbackModel + "）完成，证据链可信度需人工复核。\n"
+                        : "")
+                + "\n---\n\n";
         Path out = reportsDir.resolve(file);
         Files.writeString(out, head + report + "\n", StandardCharsets.UTF_8);
         return out;

@@ -37,7 +37,8 @@ class AgentTeamDispatcherTest {
         return new AgentTeamDispatcher(
                 "test-key", baseUrl, "test-model",
                 2, prom, chaos,
-                tempDir.resolve("reports").toString(), store(), new ActionExecutor(chaos));
+                tempDir.resolve("reports").toString(), store(), new ActionExecutor(chaos),
+                "", "", "", 2, 10);
     }
 
     @Test
@@ -51,7 +52,8 @@ class AgentTeamDispatcherTest {
                 () -> new AgentTeamDispatcher(
                         "", "https://example.invalid/v3", "m",
                         2, "http://127.0.0.1:9091", "http://127.0.0.1:9400",
-                        tempDir.resolve("reports").toString(), store(), new ActionExecutor("http://127.0.0.1:9400")));
+                        tempDir.resolve("reports").toString(), store(), new ActionExecutor("http://127.0.0.1:9400"),
+                        "", "", "", 2, 10));
     }
 
     @Test

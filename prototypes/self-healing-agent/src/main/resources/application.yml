@@ -8,10 +8,18 @@ spring:
 selfhealing:
   agent:
     enabled: true       # D10：AgentScope Team 诊断已接入（false=LoggingDispatcher 占位）
-    api-key: ${AGENT_API_KEY:${ARK_API_KEY:}}
-    base-url: ${AGENT_BASE_URL:${ARK_BASE_URL:https://ark.cn-beijing.volces.com/api/plan/v3}}
-    model: ${AGENT_MODEL:doubao-seed-2.1-turbo}
+    # primary：MikuAPI（D12 盲测用，顺带锻炼重试/降级链路）；fallback：方舟 plan
+    api-key: ${AGENT_API_KEY:${MIKU_API_KEY:}}
+    base-url: ${AGENT_BASE_URL:${MIKU_BASE_URL:https://mikuapi.org/v1}}
+    model: ${AGENT_MODEL:gpt-5.4-mini}
     max-rounds: 6
+    retry:
+      max-attempts: 3   # 单次 LLM 调用重试次数（指数退避 2s/4s/8s）
+      backoff-ms: 2000
+    fallback:           # primary 整场失败时自动降级重跑，降级事件写进报告
+      api-key: ${FALLBACK_API_KEY:${ARK_API_KEY:}}
+      base-url: ${FALLBACK_BASE_URL:${ARK_BASE_URL:https://ark.cn-beijing.volces.com/api/plan/v3}}
+      model: ${FALLBACK_MODEL:doubao-seed-2.1-turbo}
   prometheus:
     url: ${PROMETHEUS_URL:http://192.168.1.160:9091}
   chaos:
