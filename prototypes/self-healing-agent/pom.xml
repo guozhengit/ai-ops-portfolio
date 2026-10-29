@@ -18,7 +18,7 @@
     <description>原型 1：自愈型运维 Agent —— 入口层（Alertmanager webhook 接收）</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
     </properties>
 
     <dependencies>
@@ -38,6 +38,15 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- JDK 25 适配：Mockito inline-mock-maker 仍走自附加（动态 agent），
+                 显式放行并消除告警；未来 JDK 默认禁用动态 attach 前的正规过渡 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-XX:+EnableDynamicAgentLoading -Xshare:off</argLine>
+                </configuration>
             </plugin>
         </plugins>
     </build>

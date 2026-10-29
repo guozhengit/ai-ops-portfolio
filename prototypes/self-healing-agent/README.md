@@ -29,6 +29,10 @@ Alertmanager webhook ──> Agent 入口 ──> 诊断链路（MCP：查指标
 
 ## 快速开始（D9：入口层已可运行）
 
+> 运行环境：**JDK 25**（本机 `D:\jdk\jdk-25.0.5.0.3`，pom `java.version=25`）。
+> JDK 25 下 Mockito 动态 attach 已通过 surefire `-XX:+EnableDynamicAgentLoading` 正规放行；
+> 依赖里的 Guava `sun.misc.Unsafe` 弃用告警来自第三方，等上游修复，无碍。
+
 ```bash
 mvn package && java -jar target/self-healing-agent-0.1.0-SNAPSHOT.jar \
     --server.port=8400 -Dselfhealing.webhook.token=$SELFHEALING_WEBHOOK_TOKEN
