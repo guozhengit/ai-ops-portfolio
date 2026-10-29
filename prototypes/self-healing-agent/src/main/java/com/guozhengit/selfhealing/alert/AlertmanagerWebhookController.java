@@ -55,11 +55,16 @@ public class AlertmanagerWebhookController {
     @PostMapping("/webhook")
     public ResponseEntity<String> onWebhook(
             @RequestHeader(value = TOKEN_HEADER, required = false) String token,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody String rawBody) {
 
-        if (token == null || !constantTimeEquals(token, expectedToken)) {
+        // 两种认证通道：X-Webhook-Token（自托管调用方）或 Authorization: Bearer（Alertmanager 原生）
+        String presented = token != null ? token
+                : authorization != null && authorization.startsWith("Bearer ")
+                        ? authorization.substring("Bearer ".length()) : null;
+        if (presented == null || !constantTimeEquals(presented, expectedToken)) {
             journal.append("rejected", rawBody, "invalid token");
-            log.warn("webhook rejected: invalid or missing {}", TOKEN_HEADER);
+            log.warn("webhook rejected: invalid or missing {} / Authorization", TOKEN_HEADER);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("unauthorized");
         }
 
