@@ -1,0 +1,55 @@
+# chaos-demo 告警规则样例 —— 供 160 Prometheus 采纳（只演示，不自动下发）
+# 采纳方式：追加到 160 的 prometheus.yml rule_files 指向的本文件，再
+# curl -X POST http://192.168.1.160:9091/-/reload。由运维（人）执行。
+
+groups:
+  - name: chaos-demo
+    rules:
+      - alert: ChaosServiceDown
+        expr: up{job="chaos-demo"} == 0
+        for: 1m
+        labels:
+          severity: P0
+        annotations:
+          summary: "chaos-demo 不可达（可能 OOMKilled 重启窗口）"
+
+      - alert: ChaosMemoryLeak
+        expr: chaos_memory_rss_bytes > 200000000   # 256m 限额的 ~80%
+        for: 2m
+        labels:
+          severity: P1
+        annotations:
+          summary: "内存泄漏：RSS 超 200MB，逼近容器限额"
+
+      - alert: ChaosSlowSql
+        expr: |
+          histogram_quantile(0.95, sum(rate(chaos_db_query_seconds_bucket[5m])) by (le)) > 1
+        for: 2m
+        labels:
+          severity: P1
+        annotations:
+          summary: "慢 SQL：p95 查询耗时 > 1s"
+
+      - alert: ChaosPoolExhausted
+        expr: chaos_pool_in_use >= 10
+        for: 1m
+        labels:
+          severity: P1
+        annotations:
+          summary: "连接池打满：10/10 占用"
+
+      - alert: ChaosDiskFull
+        expr: chaos_disk_usage_ratio > 0.85
+        for: 2m
+        labels:
+          severity: P2
+        annotations:
+          summary: "磁盘（模拟配额 500MB）用量超 85%"
+
+      - alert: ChaosNacosFlap
+        expr: chaos_nacos_registered == 0
+        for: 1m
+        labels:
+          severity: P1
+        annotations:
+          summary: "Nacos 注册状态掉线（模拟）"

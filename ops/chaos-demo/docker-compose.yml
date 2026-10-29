@@ -1,0 +1,26 @@
+# chaos-demo —— 故障注入靶场（只碰自己的资源）
+# 项目名固定 chaos-demo：down -v 即一键清理，与业务栈零共享网络/卷。
+# memory-leak 场景依赖 256m 内存上限制造真 OOMKilled，勿调大。
+name: chaos-demo
+
+services:
+  chaos-demo:
+    build: .
+    container_name: chaos-demo
+    restart: unless-stopped        # OOMKilled 后自动拉起，制造「崩溃-恢复」真实时间线
+    mem_limit: 256m
+    ports:
+      - "9400:9400"
+    volumes:
+      - chaos-logs:/data/chaos-logs   # 专属卷，磁盘场景只膨胀这里
+    environment:
+      CHAOS_DISK_QUOTA: "524288000"   # 500MB 模拟配额
+      CHAOS_POOL_SIZE: "10"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:9400/status', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  chaos-logs:
