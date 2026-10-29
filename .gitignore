@@ -33,6 +33,8 @@ build/
 *.class
 *.jar
 !.mvn/wrapper/maven-wrapper.jar
+# vendored 本地构建的 agentscope SNAPSHOT（CI 依赖预置用，见 ci.yml）
+!prototypes/self-healing-agent/libs/**/*.jar
 .gradle/
 out/
 *.log
