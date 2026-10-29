@@ -3,6 +3,8 @@ package com.guozhengit.selfhealing.dispatch;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guozhengit.selfhealing.alert.AlertPayloads;
+import com.guozhengit.selfhealing.approval.ActionExecutor;
+import com.guozhengit.selfhealing.approval.ApprovalStore;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.model.Model;
@@ -64,6 +66,8 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
     private final String prometheusUrl;
     private final String chaosBaseUrl;
     private final Path reportsDir;
+    private final ApprovalStore approvals;
+    private final ActionExecutor executor;
 
     public AgentTeamDispatcher(
             @Value("${selfhealing.agent.api-key}") String apiKey,
@@ -72,7 +76,9 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
             @Value("${selfhealing.agent.max-rounds:6}") int maxRounds,
             @Value("${selfhealing.prometheus.url}") String prometheusUrl,
             @Value("${selfhealing.chaos.base-url}") String chaosBaseUrl,
-            @Value("${selfhealing.reports-dir:reports}") String reportsDir) {
+            @Value("${selfhealing.reports-dir:reports}") String reportsDir,
+            ApprovalStore approvals,
+            ActionExecutor executor) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("诊断模型未配置：请通过 AGENT_API_KEY / ARK_API_KEY 环境变量提供");
         }
@@ -83,6 +89,8 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
         this.prometheusUrl = prometheusUrl;
         this.chaosBaseUrl = chaosBaseUrl;
         this.reportsDir = Path.of(reportsDir);
+        this.approvals = approvals;
+        this.executor = executor;
     }
 
     @Override
@@ -95,8 +103,67 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
             String report = runTeam(teamName, alert);
             Path saved = saveReport(fp, alert, report);
             log.info("[diag] 诊断完成（{}ms），报告已落盘: {}", System.currentTimeMillis() - start, saved);
+            proposeActions(fp, alert.alertName(), saved, report);
         } catch (Exception e) {
             log.error("[diag] 诊断失败 alert={}: {}", fp, e.toString(), e);
+        }
+    }
+
+    /**
+     * D11：从诊断报告提取修复动作 → 白名单内低风险动作自动沙箱执行，
+     * 其余进入人工审批队列；所有动作与结果追加进报告文件。
+     */
+    private void proposeActions(String fp, String alertName, Path reportPath, String reportText) {
+        StringBuilder record = new StringBuilder("\n## 审批与执行记录（D11）\n\n");
+        try {
+            ReActAgent extractor = ReActAgent.builder()
+                    .name("action-extractor")
+                    .sysPrompt("你是运维动作提取器。只输出 JSON 数组，不要输出任何其他文字。")
+                    .model(model())
+                    .toolkit(new Toolkit())
+                    .build();
+            String prompt = "从下面的诊断报告提取修复动作，输出 JSON 数组，每项格式：\n"
+                    + "{\"description\":\"动作描述\",\"risk\":\"low|medium|high\",\"executable_command\":\"...\"}\n"
+                    + "executable_command 只能取 chaos:off:<scene>（scene ∈ memory-leak|slow-sql|disk-full|pool-exhaustion|nacos-flap）"
+                    + "或 null（无安全执行通道）。最多 5 项。\n\n报告：\n" + reportText;
+            Msg r = extractor.call(prompt).block(Duration.ofMinutes(3));
+            String text = r != null ? r.getTextContent() : "";
+            int s = text.indexOf('[');
+            int e = text.lastIndexOf(']');
+            if (s < 0 || e <= s) {
+                record.append("- 未能解析出结构化动作（模型未按 JSON 输出），跳过。");
+            } else {
+                JsonNode arr = MAPPER.readTree(text.substring(s, e + 1));
+                for (JsonNode item : arr) {
+                    String desc = item.path("description").asText("(无描述)");
+                    String risk = item.path("risk").asText("unknown");
+                    String cmd = item.path("executable_command").asText(null);
+                    boolean cmdOk = cmd != null && ActionExecutor.whitelisted(cmd);
+                    ApprovalStore.ApprovalRequest apr = approvals.create(fp, alertName, desc, risk, cmdOk ? cmd : null);
+                    if (cmdOk && "low".equalsIgnoreCase(risk)) {
+                        // 白名单 + 低风险：按策略自动批准并执行（审计里 decidedBy 留痕）
+                        approvals.decide(apr.id, "approve", "auto-policy:whitelisted-low-risk");
+                        ActionExecutor.ExecResult result = executor.execute(cmd);
+                        approvals.markExecuted(apr, result.output(), result.ok());
+                        record.append("- ✅ **自动执行**（白名单+低风险）`").append(cmd).append("`：")
+                                .append(result.output()).append("（审计 id=").append(apr.id).append("）\n");
+                        log.info("[actions] 自动执行 {} -> {}", cmd, result.ok());
+                    } else {
+                        record.append("- ⏸ **待人工审批** risk=").append(risk)
+                                .append(cmd != null ? "（有执行通道，批准后自动执行）" : "（无安全执行通道，批准也仅记录）")
+                                .append("：").append(desc).append("（id=`").append(apr.id).append("`）\n");
+                        log.info("[actions] 待人工审批 id={} risk={}", apr.id, risk);
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            record.append("- 动作提取失败：").append(ex.getClass().getSimpleName()).append(" ").append(ex.getMessage());
+            log.warn("[actions] 提取失败: {}", ex.toString());
+        }
+        try {
+            Files.writeString(reportPath, record + "\n", StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ex) {
+            log.error("[actions] 报告追加失败: {}", ex.toString());
         }
     }
 
