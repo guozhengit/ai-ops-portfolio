@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import model.router.config.RouterProperties;
+import model.router.provider.ChannelRegistry;
 import model.router.provider.EngineRegistry;
 import model.router.service.AudioCache;
 import model.router.service.UsageLedger;
@@ -23,13 +24,15 @@ public class StatusController {
   private final UsageLedger ledger;
   private final AudioCache cache;
   private final RouterProperties properties;
+  private final ChannelRegistry channels;
 
   public StatusController(EngineRegistry registry, UsageLedger ledger, AudioCache cache,
-      RouterProperties properties) {
+      RouterProperties properties, ChannelRegistry channels) {
     this.registry = registry;
     this.ledger = ledger;
     this.cache = cache;
     this.properties = properties;
+    this.channels = channels;
   }
 
   @GetMapping("/status")
@@ -50,9 +53,24 @@ public class StatusController {
         .map(entry -> Map.of("id", entry.getKey(), "owned_by", entry.getValue()))
         .toList();
 
+    // LLM 渠道健康：优先级、模型、是否在熔断冷却、价目是否已知（未知的成本账会记 null）
+    List<Map<String, Object>> llmChannels = channels.statuses().stream()
+        .map(status -> {
+          Map<String, Object> item = new LinkedHashMap<>();
+          item.put("id", status.id());
+          item.put("priority", status.priority());
+          item.put("models", status.models());
+          item.put("available", status.available());
+          item.put("cooldownUntil", status.cooldownUntil());
+          item.put("priceKnown", status.priceKnown());
+          return item;
+        })
+        .toList();
+
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("authRequired", !properties.getApiKeys().isEmpty());
     payload.put("engines", engines);
+    payload.put("channels", llmChannels);
     payload.put("models", models);
     payload.put("usage", ledger.totalsToday());
     payload.put("quota", Map.of(

@@ -35,16 +35,8 @@ public class SpeechController {
     this.properties = properties;
   }
 
-  @GetMapping("/models")
-  public Map<String, Object> models() {
-    List<Map<String, String>> data = registry.modelOwners().entrySet().stream()
-        .map(entry -> Map.of(
-            "id", entry.getKey(),
-            "object", "model",
-            "owned_by", entry.getValue()))
-        .toList();
-    return Map.of("object", "list", "data", data);
-  }
+  // /v1/models 已统一到 ModelsController：它要同时汇总 TTS 引擎、LLM 渠道和别名三路来源，
+  // 放在语音控制器里就只能看见一半（当年 Ambiguous mapping 就是这么撞出来的）
 
   @PostMapping("/audio/speech")
   public ResponseEntity<byte[]> speech(@Valid @RequestBody SpeechRequest request, HttpServletRequest http) {
