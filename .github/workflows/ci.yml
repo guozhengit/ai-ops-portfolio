@@ -1,0 +1,44 @@
+# CI 门禁：README 发布门（测试全通过）的自动执行器
+# 原则：绿了才能合，红了必须修——作品集的最低纪律。
+name: ci
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prototypes/self-healing-agent/**'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'prototypes/self-healing-agent/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  self-healing-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: 单元测试（11 例，含白名单拒绝/失败隔离/去重）
+        working-directory: prototypes/self-healing-agent
+        run: mvn -B test
+
+      - name: 打包冒烟（Boot 可执行 jar 能产出）
+        working-directory: prototypes/self-healing-agent
+        run: mvn -B package -DskipTests
+
+      - name: 密钥泄露扫描（.env 治理纪律的机器化）
+        run: |
+          if grep -rniE "sk-[a-z0-9]{20,}|ark-[0-9a-f]{8}-" --include="*.java" --include="*.yml" --include="*.md" prototypes/ | grep -v "sk-14cd\|示例\|example\|your_"; then
+            echo "::error::疑似明文密钥入库"
+            exit 1
+          else
+            echo "scan clean"
+          fi

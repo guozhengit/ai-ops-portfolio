@@ -1,5 +1,7 @@
 # ai-ops-portfolio — 个人 AI Ops 实验室
 
+[![ci](https://github.com/guozhengit/ai-ops-portfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/guozhengit/ai-ops-portfolio/actions/workflows/ci.yml)
+
 > **一句话价值**：别人演示 AI 能做什么，我证明 AI 在生产里怎么不出事、怎么算得清账。
 >
 > 三个原型 + 一套验证体系，统一挂在同一套基础设施（统一网关 / 验证 / 计量）上，
