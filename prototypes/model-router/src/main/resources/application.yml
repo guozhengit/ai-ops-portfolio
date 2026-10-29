@@ -1,16 +1,16 @@
 server:
-  port: 17777
+  port: 8410
 
 spring:
   application:
-    name: tts-router
+    name: model-router
   profiles:
     active: dev
   threads:
     virtual:
       enabled: true
   datasource:
-    url: jdbc:h2:file:./ttsrouter-data
+    url: jdbc:h2:file:./modelrouter-data
     username: sa
     password: ""
   sql:
