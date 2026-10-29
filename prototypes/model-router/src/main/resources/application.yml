@@ -16,6 +16,13 @@ spring:
   sql:
     init:
       mode: always
+  web:
+    resources:
+      cache:
+        # 控制台静态资源强制浏览器每次校验（304 或新内容）：默认只发 Last-Modified，
+        # Chrome 启发式缓存会让改版后的 app.js 不生效，用户看到的是旧界面
+        cachecontrol:
+          no-cache: true
 
 tts:
   api-keys:
