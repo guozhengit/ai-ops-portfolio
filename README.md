@@ -9,10 +9,10 @@
 
 | 项目 | 解决的问题 | 状态 |
 | --- | --- | --- |
-| [prototypes/self-healing-agent](prototypes/self-healing-agent) | 怎么让 Agent 碰真实生产数据并可靠地干活 | ✅ W2 功能完成（文章①已重写待发布） |
-| [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | ✅ W3 功能完成（验收门 4 过 3，剩文章②） |
-| [prototypes/infra-checkup](prototypes/infra-checkup) | 怎么把人的检查方法论固化成 Agent 流程 | ✅ W4 功能完成（文章③初稿已成，真机核对 precision/recall=1.0） |
-| [verification/](verification) | Agent 产出怎么被外部证明是对的（第 4 资产） | 🔨 建设中（场景用例/评分/红队已落地，门禁接 CI） |
+| [prototypes/self-healing-agent](prototypes/self-healing-agent) | 怎么让 Agent 碰真实生产数据并可靠地干活 | ✅ W2 功能完成（盲测 6/6 + 红队误报场，文章①已重写待发布） |
+| [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | ✅ W3 功能完成（验收门 4 过 3，剩文章②等口述素材） |
+| [prototypes/infra-checkup](prototypes/infra-checkup) | 怎么把人的检查方法论固化成 Agent 流程 | ✅ W4 功能完成（真机核对 precision/recall=1.0，文章③初稿已成） |
+| [verification/](verification) | Agent 产出怎么被外部证明是对的（第 4 资产） | 🔨 建设中（三原型场景用例 + 评分器 + 红队清单已落地，CI 门禁已上线） |
 
 **面试串场**：我做了三个原型，分别覆盖 Agent 工程的三个核心问题——可靠性（自愈 Agent）、
 成本与可用性（路由网关）、方法论固化（体检 Agent）；第四个资产（外部验证工具箱）回答
@@ -55,7 +55,21 @@ cp .env.example .env        # 填入你自己的 Key（此文件已被 .gitignor
 
 ## 踩坑记录
 
-- （随开发滚动补充，失败复盘与成功展示同等重要）
+- **换实例前先查端口占用**（model-router）：Bash 后台任务停止只杀外壳，Java 子进程继续占端口 + 锁住 H2 文件，新实例"秒起"其实是老实例在应答，换错实例的信号是"启动太快"和"渠道凭空消失"
+- **测试替身会掩盖装配问题**（self-healing-agent）：`@ConditionalOnMissingBean` 挂在普通 `@Component` 上条件求值顺序不定，主路径起不来而集成测试因 `@Primary` 替身一直绿 —— 真实进程冒烟必须做
+- **未知价目记 0 等于把"不知道"写成"免费"**（model-router）：第三方中转没有公开价目，账本记 `costUsd: null` + `costKnown: false`，比不记更糟
+- **`.gitignore` 规则会跨层级生效**（infra-checkup）：`.env.*` 静默忽略了 `fixtures/.env.prod` 靶场（本地绿 CI 红）；`reports/local/` 没有前导 `**/` 只匹配仓库根 —— 交付前必须复查暂存区实际文件清单
+- **内网采集要绕过环境代理**（infra-checkup）：urllib 被透明代理劫持，外网模型调用反被代理栈卡死（90s+ 超时），最后改成内网 `ProxyHandler({})` + 外网 curl 主通道
+
+## 已知的坑与未达成项
+
+失败的部分和成功的一样需要写清楚，详见 [docs/article-4-summary.md](docs/article-4-summary.md) 的「没做成的部分」：
+
+- MTTD ≤5min 未达成（健康路径 8.6min，降级路径 9–15min）
+- 动作提取器无兜底，"白名单自动止血"未在全自动链路跑通
+- GLM / DashScope 仍是占位符 key；本地 LM Studio 兜底档位未实现
+- 原型一 webhook 仍指向本机，服务未上服务器常驻
+- exposure 检查器未做真实全端口扫描，结论范围仅限 Prometheus 抓取清单
 
 ---
 
