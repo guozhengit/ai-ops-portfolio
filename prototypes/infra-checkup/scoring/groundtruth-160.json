@@ -1,0 +1,27 @@
+{
+  "_comment": "人工核对黄金答案（2026-10-30 02:5x，小郭/阿刁对着 160 Prometheus /api/v1/targets 的 32 个 activeTargets 逐条判定）。判定依据见 scoring/manual-review-160.md。这是外部裁判，不由检查器自己生成。",
+  "reviewed_at": "2026-10-30",
+  "source": "http://192.168.1.160:9091/api/v1/targets",
+  "total_targets": 32,
+  "manual_host_breakdown": {
+    "192.168.1.159": "20 targets 全 down，实测 ping/22/9091 全断，本机 DHCP 已变 .16 → 主机级失联，P1",
+    "clickhouse": "1 down，lastError=Docker DNS no such host → 配置了不存在的容器名，配置漂移，P1",
+    "kafka-exporter": "1 down，同上 DNS no such host → 配置漂移，P1",
+    "qdrant": "1 down，同上 DNS no such host → 配置漂移，P1",
+    "rocketmq-exporter": "1 down，同上 DNS no such host → 配置漂移，P1",
+    "_others_up": "chaos-demo/elasticsearch/mysql/pgvector/prometheus/redis/zkt-node/zkt-rabbitmq 共 8 个 up，无问题"
+  },
+  "golden_findings": [
+    {"id": "drift:hostdown:192.168.1.159", "severity": "P1", "note": "20 个目标聚合成 1 条主机级"},
+    {"id": "drift:dnsconfig:clickhouse", "severity": "P1", "note": "DNS no such host = 配置漂移"},
+    {"id": "drift:dnsconfig:kafka", "severity": "P1", "note": "同上"},
+    {"id": "drift:dnsconfig:qdrant", "severity": "P1", "note": "同上"},
+    {"id": "drift:dnsconfig:rocketmq", "severity": "P1", "note": "同上"}
+  ],
+  "_scope_note": "本黄金答案只针对 drift 检查器（监控抓取健康维度）。credscan 的真实仓库结果（5 条 P2 合规提示）与 exposure（0 条）单独人工复核，见 manual-review-160.md；它们不进这个 precision/recall 口径，因为『合规本地密钥文件』属于提示性发现，没有独立的二值真值。",
+  "known_limitations": [
+    "exposure 只依据 Prometheus 抓取清单判定，未做真实全端口扫描（SSH 免密不通），因此 0 条结论仅在『抓取清单内无高危端口』范围内成立",
+    "expected_targets 基线为空，本轮不做目标清单增删比对",
+    "评分口径只覆盖 drift 维度；credscan 的准确性由 fixtures 黄金用例（45 个单测）保证"
+  ]
+}

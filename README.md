@@ -9,10 +9,10 @@
 
 | 项目 | 解决的问题 | 状态 |
 | --- | --- | --- |
-| [prototypes/self-healing-agent](prototypes/self-healing-agent) | 怎么让 Agent 碰真实生产数据并可靠地干活 | 🔨 W2 开发中 |
-| [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | 🔨 W3 开发中 |
-| [prototypes/infra-checkup](prototypes/infra-checkup) | 怎么把人的检查方法论固化成 Agent 流程 | 📋 W4 排期 |
-| [verification/](verification) | Agent 产出怎么被外部证明是对的（第 4 资产） | 📋 随原型推进 |
+| [prototypes/self-healing-agent](prototypes/self-healing-agent) | 怎么让 Agent 碰真实生产数据并可靠地干活 | ✅ W2 功能完成（文章①已重写待发布） |
+| [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | ✅ W3 功能完成（验收门 4 过 3，剩文章②） |
+| [prototypes/infra-checkup](prototypes/infra-checkup) | 怎么把人的检查方法论固化成 Agent 流程 | ✅ W4 功能完成（真机核对 precision/recall=1.0） |
+| [verification/](verification) | Agent 产出怎么被外部证明是对的（第 4 资产） | 🔨 建设中（场景用例/评分/红队已落地，门禁接 CI） |
 
 **面试串场**：我做了三个原型，分别覆盖 Agent 工程的三个核心问题——可靠性（自愈 Agent）、
 成本与可用性（路由网关）、方法论固化（体检 Agent）；第四个资产（外部验证工具箱）回答

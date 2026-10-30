@@ -60,10 +60,18 @@ logs/
 *.pid
 data/
 data/cache/
-reports/local/
+# 注意：带斜杠且无前导 **/ 的规则只匹配「仓库根」那一层，匹配不到
+# prototypes/infra-checkup/reports/local/。必须显式写 **/ 才覆盖任意层级。
+# （2026-10-30 W4 踩过：reports/local 规则看似存在，实际没生效，报告文件差点入库）
+**/reports/local/
 .venv-chaos/
 data-chaos-logs/
 ops/chaos-demo/wheels/
 ops/chaos-demo/*.tar.gz
 ops/chaos-demo/__pycache__/
 modelrouter-data.mv.db
+
+# ===== 评测靶场 fixtures（故意埋的假凭据，必须入库才能跑 CI 黄金用例）=====
+# 根规则 .env.* 会把它们静默忽略 → 本地绿、CI checkout 后没文件 → 测试红。
+# 原型 2 的 ApiKeyAuthFilter.java 已被同类规则吞过一次，这里显式放行。
+!prototypes/infra-checkup/fixtures/.env.prod

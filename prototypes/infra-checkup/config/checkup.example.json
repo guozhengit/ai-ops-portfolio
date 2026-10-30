@@ -1,0 +1,8 @@
+{
+  "_comment": "运行配置样例。复制后按需改，真实地址/路径由本机环境决定，此文件不含任何密钥。约定：配置内所有相对路径一律以原型根目录（cli.py 所在目录）为基准，与命令行参数一致。自动产物写 reports/local/（已被根 .gitignore 忽略）；要留档的真机报告手动拷到 reports/。scan_roots 默认扫整个作品集仓库（真机体检）；fixtures 靶场目录会被自动跳过，仅用于黄金用例单测。",
+  "prometheus_url": "http://192.168.1.160:9091",
+  "baseline_path": "config/baseline.example.json",
+  "scan_roots": ["../.."],
+  "checkers": ["credscan", "drift", "exposure"],
+  "out_dir": "reports/local"
+}

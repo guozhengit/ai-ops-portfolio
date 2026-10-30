@@ -1,0 +1,28 @@
+{
+  "source": "live(160)",
+  "golden_source": "http://192.168.1.160:9091/api/v1/targets",
+  "result": {
+    "true_positive": [
+      "drift:dnsconfig:clickhouse",
+      "drift:dnsconfig:kafka",
+      "drift:dnsconfig:qdrant",
+      "drift:dnsconfig:rocketmq",
+      "drift:hostdown:192.168.1.159"
+    ],
+    "false_negative_漏报": [],
+    "false_positive_误报": [],
+    "severity_mismatch": [],
+    "tp": 5,
+    "fn": 0,
+    "fp": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "golden_count": 5,
+    "reported_count": 5
+  },
+  "limitations": [
+    "exposure 只依据 Prometheus 抓取清单判定，未做真实全端口扫描（SSH 免密不通），因此 0 条结论仅在『抓取清单内无高危端口』范围内成立",
+    "expected_targets 基线为空，本轮不做目标清单增删比对",
+    "评分口径只覆盖 drift 维度；credscan 的准确性由 fixtures 黄金用例（45 个单测）保证"
+  ]
+}

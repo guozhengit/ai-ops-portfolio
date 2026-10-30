@@ -8,11 +8,15 @@ on:
     paths:
       - 'prototypes/self-healing-agent/**'
       - 'prototypes/model-router/**'
+      - 'prototypes/infra-checkup/**'
+      - 'verification/**'
       - '.github/workflows/**'
   pull_request:
     paths:
       - 'prototypes/self-healing-agent/**'
       - 'prototypes/model-router/**'
+      - 'prototypes/infra-checkup/**'
+      - 'verification/**'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -46,7 +50,11 @@ jobs:
 
       - name: 密钥泄露扫描（.env 治理纪律的机器化）
         run: |
-          if grep -rniE "sk-[a-z0-9]{20,}|ark-[0-9a-f]{8}-" --include="*.java" --include="*.yml" --include="*.md" prototypes/ | grep -v "sk-14cd\|示例\|example\|your_"; then
+          # fixtures 是评测靶场，故意埋了假凭据（sk-live-... 之类），必须排除，
+          # 否则真机核对写进 md 文档时会被误判成泄露导致 CI 红。
+          if grep -rniE "sk-[a-z0-9]{20,}|ark-[0-9a-f]{8}-" \
+               --include="*.java" --include="*.yml" --include="*.md" prototypes/ \
+               | grep -v "sk-14cd\|示例\|example\|your_\|fixtures/\|靶场\|假数据"; then
             echo "::error::疑似明文密钥入库"
             exit 1
           else
@@ -71,3 +79,31 @@ jobs:
       - name: 打包冒烟
         working-directory: prototypes/model-router
         run: mvn -B package -DskipTests
+
+  infra-checkup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # 纯标准库，无第三方依赖：CI 不需要装 requirements
+      - name: 编译检查
+        working-directory: prototypes/infra-checkup
+        run: python -m compileall -q infra_checkup scoring cli.py
+
+      - name: 单元测试（黄金用例/自推断/DNS 漂移分级/脱敏/反注入/降级）
+        working-directory: prototypes/infra-checkup
+        run: python -W error::ResourceWarning -m unittest discover -s tests
+
+      - name: 评分器元验证（评分器对已知答案必须 100% 判对，否则不评原型）
+        working-directory: prototypes/infra-checkup
+        run: python cli.py verify-scorer
+
+      # CI 连不到内网 160，真机 precision/recall 由本地 scoring/run_score.py 产出并留档；
+      # 这里用内置快照跑一次评分器，保证评分链路本身在 CI 可复现。
+      - name: 评分链路冒烟（内置快照，不依赖外网）
+        working-directory: prototypes/infra-checkup
+        run: python -c "from scoring.score import self_test, score; assert self_test(); print('scorer ok')"

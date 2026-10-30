@@ -1,0 +1,12 @@
+# 黄金用例靶场：应用配置
+spring:
+  datasource:
+    url: jdbc:mysql://prod-db.internal:3306/appdb
+    username: appuser
+    password: ProdDbPassw0rd!2026
+  redis:
+    host: 10.0.0.6
+    # password: CommentedRedisPass123  （注释，P2）
+  mail:
+    apiKey: placeholder
+    secret: ${MAIL_SECRET}
