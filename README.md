@@ -12,7 +12,7 @@
 | [prototypes/self-healing-agent](prototypes/self-healing-agent) | 怎么让 Agent 碰真实生产数据并可靠地干活 | ✅ W2 功能完成（盲测 6/6 + 红队误报场，文章①已重写待发布） |
 | [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | ✅ W3 功能完成（验收门 4 过 4：文章②初稿已成，留 3 处口述槽位发布前补全） |
 | [prototypes/infra-checkup](prototypes/infra-checkup) | 怎么把人的检查方法论固化成 Agent 流程 | ✅ W4 功能完成（真机核对 precision/recall=1.0，文章③初稿已成） |
-| [verification/](verification) | Agent 产出怎么被外部证明是对的（第 4 资产） | 🔨 建设中（三原型场景用例 + 评分器 + 红队清单已落地，CI 门禁已上线） |
+| [verification/](verification) | Agent 产出怎么被外部证明是对的（第 4 资产） | ✅ V2 建成（三原型场景用例 + 评分器元验证 + 红队清单 + CI 门禁 + **证据重放门禁与哈希清单** + 信任标定协议与结构化真值；tier 矩阵与预算护栏随原型 2 入 CI） |
 
 **面试串场**：我做了三个原型，分别覆盖 Agent 工程的三个核心问题——可靠性（自愈 Agent）、
 成本与可用性（路由网关）、方法论固化（体检 Agent）；第四个资产（外部验证工具箱）回答
@@ -66,9 +66,9 @@ cp .env.example .env        # 填入你自己的 Key（此文件已被 .gitignor
 
 失败的部分和成功的一样需要写清楚，详见 [docs/article-4-summary.md](docs/article-4-summary.md) 的「没做成的部分」：
 
-- MTTD ≤5min 未达成（健康路径基线 8.6min，降级盲测场 9–15min；同场景串行→并行 A/B：8m02s→6m42s）
-- 动作提取器无兜底，"白名单自动止血"未在全自动链路跑通
-- GLM / DashScope 仍是占位符 key；本地 LM Studio 兜底档位未实现
+- ~~MTTD ≤5min 未达成~~ **主档口径已达成**（e2e1002 = 4m21s，2026-10-31；口径换代：模型换 deepseek-v4.1-flash + worker 并行，与历史 8m34s / 降级 6m42s 不同口径不可直比；降级路径仍未达）
+- ~~动作提取器无兜底，"白名单自动止血"未在全自动链路跑通~~ **兜底已落地**（fallback 重试 + 分级 schema，期 2 D2.1）；**自动止血已在全自动链路跑通**（e2e1002：提取 4 条 → 白名单动作自动执行 → 3 条按边界待人工审批）；兜底的故障场复测待真实 primary 故障窗口
+- GLM / DashScope 仍是占位符 key（申请步骤见 [docs/external-accounts-guide.md](docs/external-accounts-guide.md)，暂缓对接）；本地 LM Studio 兜底档位未实现
 - 原型一 webhook 仍指向本机，服务未上服务器常驻
 - exposure 检查器未做真实全端口扫描，结论范围仅限 Prometheus 抓取清单
 
