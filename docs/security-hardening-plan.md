@@ -109,4 +109,7 @@ P0-3（制度，立即）→ P0-2 sshd（先备好第二入口）→ P0-1 pf 白
 - 全部完成前，本文档不视为关闭；执行记录追加到 `.workbuddy/memory/` 对应日期。
 
 ---
-状态：v1 方案（2026-10-29），未执行。等待批准后按顺序推进。
+状态：v1 方案（2026-10-29）。执行进度：**P0-3 已制度化（2026-10-31，写入 MEMORY + verification README）**；
+P0-2 / P0-1 runbook 已备（[security-p0-runbook.md](security-p0-runbook.md)，含备份/验证/三档回滚），
+2026-10-31 实测 admin@160 免密可达（macOS 12.7.6）但 sudo 需密码 → sudo 步骤由机主按 runbook 亲自执行。
+P1 / P2 未启动。
