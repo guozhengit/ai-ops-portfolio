@@ -180,7 +180,11 @@ sudo pfctl -d
 | 步骤 | 日期 | 执行人 | 验证结果 | 备份文件 |
 | --- | --- | --- | --- | --- |
 | P0-3 制度化 | 2026-10-31 | AI(代理) | 写入 MEMORY + verification README | — |
-| P0-2 sshd | | | | |
+| P0-2 sshd | 2026-10-31 | 机主(p0-sshd-allowusers.sh) | AllowUsers admin 生效、免密仍通；**实测发现 200-hardening.conf 早在 2026-07-06 已关密码认证**，本次补齐白名单 | `/etc/ssh/sshd_config.bak.p0-20261031-123001` |
 | P0-1 pf | | | | |
+
+**P0-2 遗留测试（2026-10-31）**：服务器仍提供 `keyboard-interactive`（PAM），全配置未设
+`ChallengeResponseAuthentication`——需机主用真实密码行为验证该通道是否仍接受密码；
+若接受，补 `ChallengeResponseAuthentication no` drop-in（macOS 12 = OpenSSH 8.6，只能用旧名）。
 
 完成后把本行状态改掉：`security-hardening-plan.md` 尾部状态行。
