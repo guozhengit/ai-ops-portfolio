@@ -97,3 +97,15 @@
       真流量实证：263 帧 / 74KB 流式响应 → 账本行
       `{"channel":"miku","promptTokens":35,"completionTokens":262,"costUsd":null,"costKnown":false,"latencyMs":7251,"stream":true}`
       ——token 精确了，成本依然是 null：价目未知这件事不会因为 token 数知道了就变得已知。
+
+---
+
+## 复测：2026-10-31（1-token 探测，key 未落盘未回显）
+
+| 渠道 | key | 模型 | 结果 |
+| --- | --- | --- | --- |
+| miku 主档 | 新 key | deepseek-v4.1-flash | **200，2713ms**（2026-10-29 深夜的 502 瞬态未复现） |
+| miku-gpt | 旧 key | gpt-5.4-mini | **502 `upstream_error`「Upstream access forbidden」**（503→502，上游仍未恢复） |
+
+影响：原型 1「主模型路径 MTTD 补测」（gpt-5.4-mini 走旧 key）继续阻塞；主档 deepseek-v4.1-flash
+路径已可用，可先行以主档为主模型补测一场（口径需在文章①里注明更换）。

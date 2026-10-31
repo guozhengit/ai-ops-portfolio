@@ -25,6 +25,9 @@
 1. **初版把 159 的 20 个目标逐条报，产出 24 条 P1 噪音**，而且判定依赖我手工填进
    `known_dead_hosts` 的基线——等于工具只是复述人已经知道的死 IP。改成主机级聚合 +
    无基线自推断（同 IP 多目标同时 down 即推断主机故障）后，收敛成 1 条 P1。
+   分支留痕：2026-10-30 留档真机跑时本地基线未清，159 走的是**基线确认分支**
+   （findings JSONL meta `confirmed_by_baseline: true, self_inferred: false`）；
+   无基线的自推断路径由单测 `test_self_infer_without_baseline` 覆盖，两条路以 meta 字段区分。
 2. **初版把 clickhouse/kafka/qdrant/rocketmq 降成 P2「需人工确认」**。人工看
    `lastError` 才发现全是 Docker DNS `no such host`——这不是「服务可能临时挂了」，
    是配置里写了根本不存在的容器名，确定性配置错误。补 DNS 判定后升为 P1。
