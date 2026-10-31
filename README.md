@@ -10,7 +10,7 @@
 | 项目 | 解决的问题 | 状态 |
 | --- | --- | --- |
 | [prototypes/self-healing-agent](prototypes/self-healing-agent) | 怎么让 Agent 碰真实生产数据并可靠地干活 | ✅ W2 功能完成（盲测 6/6 + 红队误报场，文章①已重写待发布） |
-| [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | ✅ W3 功能完成（验收门 4 过 3，剩文章②等口述素材） |
+| [prototypes/model-router](prototypes/model-router) | 怎么在多模型环境下控制成本与可用性 | ✅ W3 功能完成（验收门 4 过 4：文章②初稿已成，留 3 处口述槽位发布前补全） |
 | [prototypes/infra-checkup](prototypes/infra-checkup) | 怎么把人的检查方法论固化成 Agent 流程 | ✅ W4 功能完成（真机核对 precision/recall=1.0，文章③初稿已成） |
 | [verification/](verification) | Agent 产出怎么被外部证明是对的（第 4 资产） | 🔨 建设中（三原型场景用例 + 评分器 + 红队清单已落地，CI 门禁已上线） |
 
@@ -26,9 +26,9 @@
 ai-ops-portfolio/
 ├── prototypes/          # 三个原型（每个可独立运行、独立发布文章）
 │   ├── self-healing-agent/   # 原型 1：Prometheus 告警 → Agent 诊断 → 沙箱验证 → 人工审批
-│   ├── model-router/         # 原型 2：6 家云端 + LM Studio 本地兜底的多模型路由网关
+│   ├── model-router/         # 原型 2：多模型路由网关（渠道四元组 / 熔断分级 / 成本账本；GLM、DashScope 与本地兜底档未接，见 known-defects）
 │   └── infra-checkup/        # 原型 3：端口审计/凭据扫描/配置漂移的 Agent 化体检
-├── verification/        # 第 4 资产：Agent 外部验证工具箱（场景用例 + 评分脚本 + CI 门禁）
+├── verification/        # 第 4 资产：Agent 外部验证工具箱（场景用例 + 红队缺陷清单 + CI 门禁；评分脚本随原型 3 自带）
 ├── docs/                # 发布文章、复盘记录、失败案例
 ├── ops/                 # 靶场脚本与部署物料（故障注入 demo 服务等）
 ├── config/              # 供应商路由配置模板（价格表 / 能力分 / 降级策略）
@@ -65,7 +65,7 @@ cp .env.example .env        # 填入你自己的 Key（此文件已被 .gitignor
 
 失败的部分和成功的一样需要写清楚，详见 [docs/article-4-summary.md](docs/article-4-summary.md) 的「没做成的部分」：
 
-- MTTD ≤5min 未达成（健康路径 8.6min，降级路径 9–15min）
+- MTTD ≤5min 未达成（健康路径基线 8.6min，降级盲测场 9–15min；同场景串行→并行 A/B：8m02s→6m42s）
 - 动作提取器无兜底，"白名单自动止血"未在全自动链路跑通
 - GLM / DashScope 仍是占位符 key；本地 LM Studio 兜底档位未实现
 - 原型一 webhook 仍指向本机，服务未上服务器常驻

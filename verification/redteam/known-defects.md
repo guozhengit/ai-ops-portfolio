@@ -24,10 +24,13 @@
 
 ## 原型 1 · self-healing-agent（W2，沿用记录）
 
-- **MTTD 未达野心目标**：worker 并行化后 8m02s → 6m42s，目标 ≤5min 未达成
+- **MTTD 未达野心目标**：同场景（连接池、降级路径）串行→并行 A/B 为 8m02s → 6m42s；健康路径基线（e2e1001）8m34s（≈8.6min）；目标 ≤5min 未达成
 - **主模型路径未复测**：MikuAPI 持续 503，盲测 6/6 全走降级路径（方舟兜底）
 - **动作提取器**走 primary 无兜底，主模型恢复后需补验
 - **重启清内存去重**：agent 重启会清空 InMemory DedupService，同一 firing 告警可能重复诊断（低优先级）
+- **审计账本历史瑕疵**：`data/approvals.jsonl` 早期开发迭代的 created 事件里 `decidedBy` 落成了字符串 `"null"`
+  （正式版代码是 `""` 兜底 + UTF-8 落盘，2026-10-31 核对过全文件 UTF-8 无乱码）。历史审计只追加不改写，
+  瑕疵原样保留，看 created 事件的 decidedBy 时注意区分
 - chaos_ 指标一度未被 160 Prometheus 抓取（P0 阶段已修）
 
 ## 原型 2 · model-router（W3，沿用记录）
