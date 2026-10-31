@@ -59,6 +59,7 @@ cp .env.example .env        # 填入你自己的 Key（此文件已被 .gitignor
 - **测试替身会掩盖装配问题**（self-healing-agent）：`@ConditionalOnMissingBean` 挂在普通 `@Component` 上条件求值顺序不定，主路径起不来而集成测试因 `@Primary` 替身一直绿 —— 真实进程冒烟必须做
 - **未知价目记 0 等于把"不知道"写成"免费"**（model-router）：第三方中转没有公开价目，账本记 `costUsd: null` + `costKnown: false`，比不记更糟
 - **`.gitignore` 规则会跨层级生效**（infra-checkup）：`.env.*` 静默忽略了 `fixtures/.env.prod` 靶场（本地绿 CI 红）；`reports/local/` 没有前导 `**/` 只匹配仓库根 —— 交付前必须复查暂存区实际文件清单
+- **账本位置以原型目录为准**（self-healing-agent）：仓库根 `data/` 下有同名 0 字节空壳 jsonl（来源待查），真实账本在 `prototypes/self-healing-agent/data/`（approvals 7 行 / incidents 13 行）——引用前先核对行数
 - **内网采集要绕过环境代理**（infra-checkup）：urllib 被透明代理劫持，外网模型调用反被代理栈卡死（90s+ 超时），最后改成内网 `ProxyHandler({})` + 外网 curl 主通道
 
 ## 已知的坑与未达成项

@@ -67,7 +67,7 @@
 ### 期 1 验收门
 
 - [ ] 文章 1、3、2 全部发布（含口述槽位补全）
-- [ ] 4 张 run_spec 卡入库，模板进 verification/
+- [x] 4 张 run_spec 卡入库，模板进 verification/（2026-10-31 回填：usage-report / d12-reports / score-result-160 / d12-blindtest）
 - [ ] `action-classes.md` v1 有"forbidden 永不毕业"行
 - [ ] known-defects 有"不证明什么"节（**本设计落地时已顺手完成**）
 

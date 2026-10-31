@@ -19,7 +19,7 @@ verification/
 已落地：
 - `scenarios/infra-checkup-cases.md` —— 原型 3 的黄金用例、分级规则快照、真机对照
 - `redteam/known-defects.md` —— 三个原型的已知缺陷与未做事项，随每次真机核对更新；顶部含「我们的验证不证明什么」边界声明（V2 地基期 C1）
-- `run-spec.template.json` —— 测量归因卡：凡对外数字必附一张卡，记录模型/配置/环境/口径，key 只存指纹；首批回填 4 张（见 docs/v2-phase-plan.md D1.1）
+- `run-spec.template.json` —— 测量归因卡：凡对外数字必附一张卡，记录模型/配置/环境/口径，key 只存指纹；首批 4 张已回填（usage-report / d12-reports / score-result-160 / d12-blindtest）
 - CI gate —— `ci.yml` 覆盖 self-healing-agent / model-router / infra-checkup 三个 job
 
 原型 3 的真机外部裁判结果：160 的 32 个抓取目标人工逐条核对，drift 维度

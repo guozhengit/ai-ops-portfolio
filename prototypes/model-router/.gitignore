@@ -6,6 +6,7 @@ target/
 data/*
 !data/usage.jsonl
 !data/usage-report.json
+!data/usage-report.run-spec.json
 .tmp/
 ttsrouter-data*.mv.db
 ttsrouter-data*.trace.db

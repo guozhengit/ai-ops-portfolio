@@ -1,0 +1,35 @@
+{
+  "specVersion": 1,
+  "subject": "self-healing-agent D12 盲测报告集（d12s1–s5 + d12rt，共 6 场）",
+  "artifact": "prototypes/self-healing-agent/reports/incident-20261029T083332.925717600Z-d12s1.md（集合代表文件，同目录另有 5 个 d12 报告）",
+  "generatedAt": "2026-10-29T08:33:33Z（首场；集合时间窗 08:33–09:31Z）",
+  "model": {
+    "provider": "miku（主档，故障）/ ark（降级，实际执行）",
+    "modelName": "主档 gpt-5.4-mini；实际生成方 doubao-seed-2.1-turbo",
+    "baseUrl": "miku https://mikuapi.org/v1 · ark https://ark.cn-beijing.volces.com/api/plan/v3",
+    "keyFingerprint": "miku sha256:ff4a2f45 · ark sha256:5ff80336",
+    "fallback": "doubao-seed-2.1-turbo @ ark（6/6 场的实际生成方）"
+  },
+  "config": {
+    "configVersion": "b0aa5af",
+    "routerConfig": "selfhealing.agent.*（application.yml）：max-rounds=6，单次调用重试 3 次指数退避；AgentScope harness Team（lead + metrics/logs/remedy，只读工具）"
+  },
+  "environment": {
+    "host": "本机 Windows + 160 靶机（Prometheus 9091 / chaos-demo 9400）",
+    "notes": "现场跑完即停；8400/8410/9400 未常驻，复现需按 README 拉起环境"
+  },
+  "measurement": {
+    "method": "chaos-demo 注入 5 场景 + 1 红队空场（告警只含症状、不泄露场景名）；诊断链产出带证据链报告；人工对照黄金答案与判定见 docs/d12-blindtest.md",
+    "rawRecords": [
+      "prototypes/self-healing-agent/reports/（6 个 d12 报告）",
+      "prototypes/self-healing-agent/data/incidents.jsonl（原始告警报文，13 行）",
+      "prototypes/self-healing-agent/data/approvals.jsonl（审批审计，7 行）"
+    ],
+    "knownCaveats": [
+      "6/6 场全部走降级路径（MikuAPI 持续 503），主模型路径未复测（known-defects 挂账）",
+      "报告头「诊断模型」字段显示的是配置的主模型名，实际生成方以 ⚠️ 降级标记行为准——只读头部会误判",
+      "动作提取器走主模型无兜底，本集合 6 场提取全部失败，「白名单自动止血」未在全自动链路验证",
+      "仓库根 data/ 下有同名 0 字节空壳文件（2026-10-30 生成，来源待查），真实账本以本原型 data/ 目录为准"
+    ]
+  }
+}

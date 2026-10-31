@@ -1,0 +1,33 @@
+{
+  "specVersion": 1,
+  "subject": "self-healing-agent D12 盲测计时（MTTD 记录表 + 串行/并行 A/B）",
+  "artifact": "prototypes/self-healing-agent/docs/d12-blindtest.md（MTTD 记录表节）",
+  "generatedAt": "2026-10-29（六场时间窗 08:33–09:31Z；A/B 对照为同日 11:00/11:18Z）",
+  "model": {
+    "provider": "miku（主档，故障）/ ark（降级，实际执行）",
+    "modelName": "计时数据对应的是降级路径 doubao-seed-2.1-turbo",
+    "baseUrl": "ark https://ark.cn-beijing.volces.com/api/plan/v3",
+    "keyFingerprint": "ark sha256:5ff80336",
+    "fallback": "doubao-seed-2.1-turbo @ ark"
+  },
+  "config": {
+    "configVersion": "b0aa5af",
+    "routerConfig": "串行场早于并行化提交 7ff3584（P1: parallelize diagnosis workers），并行场晚于该提交——A/B 两点各占一个配置侧"
+  },
+  "environment": {
+    "host": "本机 Windows + 160 靶机",
+    "notes": "现场跑完即停"
+  },
+  "measurement": {
+    "method": "口径：journal receivedAt（告警进入时刻）→ 报告文件 mtime；A/B 对照用报告生成时间戳（串行 8m02s → 并行 6m42s，UTC 可复核）",
+    "rawRecords": [
+      "prototypes/self-healing-agent/data/incidents.jsonl（receivedAt 起点）",
+      "prototypes/self-healing-agent/reports/（d12 与 82fc36 两份 A/B 报告，mtime 为计时终点）"
+    ],
+    "knownCaveats": [
+      "计时终点为文件 mtime（含落盘耗时），非报告内容完成时刻",
+      "全部为降级路径计时；健康路径基线另有 e2e1001 = 8m34s",
+      "无机器可读计时文件，mtime 是事后可复核的最近似口径（期 2 可补结构化计时）"
+    ]
+  }
+}

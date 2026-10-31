@@ -1,0 +1,31 @@
+{
+  "specVersion": 1,
+  "subject": "model-router 成本账本聚合快照（文章②引用口径）",
+  "artifact": "prototypes/model-router/data/usage-report.json",
+  "generatedAt": "2026-10-29T16:25:45+00:00",
+  "model": {
+    "provider": null,
+    "modelName": "deepseek-v4.1-flash (miku) / gpt-5.4-mini (ark) / mimo-v2.6-flash (mimo)，按 byChannel 分列",
+    "baseUrl": "miku https://mikuapi.org/v1 · ark https://ark.cn-beijing.volces.com/api/plan/v3",
+    "keyFingerprint": "miku sha256:ff4a2f45 · ark sha256:5ff80336",
+    "fallback": null
+  },
+  "config": {
+    "configVersion": "b0aa5af",
+    "routerConfig": "router.channels 5 渠道（application.yml），价目可空=null 表示未知；miku 渠道无公开价目"
+  },
+  "environment": {
+    "host": "本机 Windows（网关本地运行）",
+    "notes": "现场跑完即停，非常驻服务"
+  },
+  "measurement": {
+    "method": "ops/usage-report.py --json 从 append-only usage.jsonl 全量重放聚合；可复现性验收 = 重跑脚本应逐位重建本文件",
+    "rawRecords": [
+      "prototypes/model-router/data/usage.jsonl"
+    ],
+    "knownCaveats": [
+      "总额 $0.00119 仅含 costKnown=true 的调用；miku 2 笔价目未知 costUsd=null，未计入（纪律：未知≠0）",
+      "快照时点为 2026-10-29T16:25Z（本地 10-30 凌晨），其后新增调用不在本快照范围，需重新聚合"
+    ]
+  }
+}
