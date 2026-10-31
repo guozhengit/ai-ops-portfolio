@@ -13,6 +13,7 @@ public class RouterProperties {
   private final Health health = new Health();
   private final Audio audio = new Audio();
   private final Split split = new Split();
+  private final Budget budget = new Budget();
   private List<String> apiKeys = new ArrayList<>();
   private List<Engine> engines = new ArrayList<>();
 
@@ -197,6 +198,48 @@ public class RouterProperties {
     }
   }
 
+  /** V2-D2.3：LLM 日级预算硬止损。默认关闭；账本层 null 纪律不动，护栏层未知成本上界估记。 */
+  public static class Budget {
+    private boolean enabled = false;
+    private double dailyUsd = 0;
+    /** 前置预留：发请求前按「当日已用 + 预留」判断，避免本笔调用把当日账打穿。 */
+    private double reservePerCallUsd = 0;
+    /** 注册表里没有任何已知价目时，未知成本上界估记的兜底单价（$/MTok）。 */
+    private double estimateFallbackPerMTokOut = 0;
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    public double getDailyUsd() {
+      return dailyUsd;
+    }
+
+    public void setDailyUsd(double dailyUsd) {
+      this.dailyUsd = dailyUsd;
+    }
+
+    public double getReservePerCallUsd() {
+      return reservePerCallUsd;
+    }
+
+    public void setReservePerCallUsd(double reservePerCallUsd) {
+      this.reservePerCallUsd = reservePerCallUsd;
+    }
+
+    public double getEstimateFallbackPerMTokOut() {
+      return estimateFallbackPerMTokOut;
+    }
+
+    public void setEstimateFallbackPerMTokOut(double estimateFallbackPerMTokOut) {
+      this.estimateFallbackPerMTokOut = estimateFallbackPerMTokOut;
+    }
+  }
+
   public Cache getCache() {
     return cache;
   }
@@ -207,6 +250,10 @@ public class RouterProperties {
 
   public Quota getQuota() {
     return quota;
+  }
+
+  public Budget getBudget() {
+    return budget;
   }
 
   public Health getHealth() {

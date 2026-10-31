@@ -152,8 +152,8 @@
 
 - [ ] 提取器兜底落地，主模型故障场提取不再全灭（**代码已落地**：fallback 重试 + schema 扩展 + 制度禁行守卫，2026-10-31；故障场复测待真实 primary 故障或实验窗口验证）
 - [ ] 信任标定两代际 × 6 场，三分类数据表 + run_spec 卡（真值与协议已入库：`verification/scenarios/self-healing-groundtruth.json` + `self-healing-cases.md`；G2 单点 = e2e1002）
-- [ ] tier 矩阵测试进 CI 全绿（含 upgrade path 桩版）
-- [ ] 预算熔断演练通过（429 + 留痕 + 恢复）
+- [x] tier 矩阵测试进 CI 全绿（含 upgrade path 桩版）——`ChannelTierMatrixTest` 4 例：tier1 单渠道 / tier2 瞬态-确定性语义分治（402 不熔断是核心断言）/ tier3 优先级+价目选路 / 装配禁用+上游修复零配置回归
+- [x] 预算熔断演练通过（429 + 留痕 + 恢复）——`BudgetGuard` 日级护栏（known/estimated 分桶，未知成本上界估记不入账本）+ `BudgetEnforcementTest` 端到端 429 演练 + 日切恢复；配置默认关（`router.budget.enabled: false`）
 - [x] 重放门禁 CI 绿，manifest.sha256 入库（2026-10-31 本地逐位一致 ×2；CI 随本提交生效；首跑即抓获 usage-report 快照滞后 19 行——门禁有效性实证）
 
 ---

@@ -52,6 +52,14 @@ router:
     failure-threshold: 2
     cooldown: 60s
   usage-path: data/usage.jsonl
+  # V2-D2.3：LLM 日级预算硬止损（默认关）。账本层 costUsd=null 纪律不动（未知≠0）；
+  # 护栏层未知成本按上界估记（注册表最贵已知价目，无已知价目时用 estimate-fallback），
+  # 估记只进预算判断、只落 data/budget-events.jsonl，永不写进 usage.jsonl。
+  budget:
+    enabled: false
+    daily-usd: 0
+    reserve-per-call-usd: 0
+    estimate-fallback-per-mtok-out: 0
   # 启动期拿 GET /v1/models 校准每个渠道声明的模型：中转渠道的可用模型跟着 key 走，
   # 声明了但 key 没权益的模型会被摘掉，避免请求期稳定吃 404 才降级
   probe-models: true
