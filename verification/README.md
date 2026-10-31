@@ -9,6 +9,7 @@
 verification/
 ├── scenarios/      # 场景用例：infra-checkup-cases.md（黄金用例 + 构造快照 + 真机对照）
 ├── redteam/        # known-defects.md：公开「已知缺陷清单」，可信度 > 完美度
+├── run-spec.template.json  # 测量归因卡模板（V2 地基期 B3，借 EverOS benchmarks 的 run_spec.json）
 #
 # 评分脚本不单设目录：随原型自带（prototypes/infra-checkup/scoring/，含 run_score.py
 # 与元验证「评分器对已知答案必须 100% 判对」）；CI 门禁即 .github/workflows/ci.yml
@@ -17,7 +18,8 @@ verification/
 
 已落地：
 - `scenarios/infra-checkup-cases.md` —— 原型 3 的黄金用例、分级规则快照、真机对照
-- `redteam/known-defects.md` —— 三个原型的已知缺陷与未做事项，随每次真机核对更新
+- `redteam/known-defects.md` —— 三个原型的已知缺陷与未做事项，随每次真机核对更新；顶部含「我们的验证不证明什么」边界声明（V2 地基期 C1）
+- `run-spec.template.json` —— 测量归因卡：凡对外数字必附一张卡，记录模型/配置/环境/口径，key 只存指纹；首批回填 4 张（见 docs/v2-phase-plan.md D1.1）
 - CI gate —— `ci.yml` 覆盖 self-healing-agent / model-router / infra-checkup 三个 job
 
 原型 3 的真机外部裁判结果：160 的 32 个抓取目标人工逐条核对，drift 维度

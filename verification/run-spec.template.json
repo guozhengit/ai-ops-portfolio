@@ -1,0 +1,31 @@
+{
+  "$comment": "测量归因卡（run_spec）模板 —— V2 地基期 B3 项。凡产生对外数字的测量/实验/评分产物，复制本模板到产物同目录，命名 <产物名>.run-spec.json，逐字段填写。纪律：keyFingerprint 只存 sha256 前 8 位永不落明文；rawRecords 必须指向 append-only 原始记录（jsonl），不指向派生聚合；knownCaveats 强制非空（至少一条口径限制）。",
+  "specVersion": 1,
+  "subject": "<原型名或实验名，如 model-router / trust-calibration>",
+  "artifact": "<本卡描述的产物文件相对路径>",
+  "generatedAt": "<UTC ISO-8601，如 2026-10-31T08:30:00Z>",
+  "model": {
+    "provider": "<渠道 id，如 ark / miku；纯脚本评分不依赖模型时填 null>",
+    "modelName": "<模型名，如 doubao-seed-2.1-turbo>",
+    "baseUrl": "<endpoint，脱敏后可入库>",
+    "keyFingerprint": "sha256:<前 8 位>",
+    "fallback": "<降级模型及代际标记，无则 null>"
+  },
+  "config": {
+    "configVersion": "<产生数字时的 git commit sha>",
+    "routerConfig": "<渠道/阈值等关键配置摘要，不适用填 null>"
+  },
+  "environment": {
+    "host": "<执行环境，如 本机 Windows / 160 真机>",
+    "notes": "<如：现场跑完即停（非常驻服务）>"
+  },
+  "measurement": {
+    "method": "<怎么测的，一句话口径>",
+    "rawRecords": [
+      "<append-only 原始记录路径，如 prototypes/model-router/data/usage.jsonl>"
+    ],
+    "knownCaveats": [
+      "<口径限制，强制至少一条>"
+    ]
+  }
+}
