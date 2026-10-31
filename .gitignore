@@ -71,6 +71,22 @@ ops/chaos-demo/*.tar.gz
 ops/chaos-demo/__pycache__/
 modelrouter-data.mv.db
 
+# ===== 证据留档（文章引用的数据源必须随仓库可复核，2026-10-31 起显式放行）=====
+# data/ 规则把三处运行时账本一并吞了：文章①的 MTTD 出处是 incidents.jsonl，
+# 文章②/④的成本出处是 usage.jsonl / usage-report.json —— 不放行等于「数据有出处」门禁落空。
+# 只放行证据本体，缓存/草稿（h1.txt、r1.json 等）维持忽略。
+!prototypes/self-healing-agent/data/
+prototypes/self-healing-agent/data/*
+!prototypes/self-healing-agent/data/incidents.jsonl
+!prototypes/self-healing-agent/data/approvals.jsonl
+!prototypes/model-router/data/
+prototypes/model-router/data/*
+!prototypes/model-router/data/usage.jsonl
+!prototypes/model-router/data/usage-report.json
+!data/
+data/*
+!data/channel-report.json
+
 # ===== 评测靶场 fixtures（故意埋的假凭据，必须入库才能跑 CI 黄金用例）=====
 # 根规则 .env.* 会把它们静默忽略 → 本地绿、CI checkout 后没文件 → 测试红。
 # 原型 2 的 ApiKeyAuthFilter.java 已被同类规则吞过一次，这里显式放行。

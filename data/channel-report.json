@@ -1,0 +1,83 @@
+[
+  {
+    "name": "DeepSeek",
+    "base_url": "https://api.deepseek.com",
+    "models_count": 2,
+    "models_sample": [
+      "deepseek-flash",
+      "deepseek-v4-pro"
+    ],
+    "model": "deepseek-flash",
+    "chat": {
+      "ok": false,
+      "http": 402,
+      "latency_ms": 399,
+      "error": "{\"error\":{\"message\":\"Insufficient Balance (request_id: a5af0b10-502a-437e-834f-bb2ea0debddf)\",\"type\":\"insufficient_balance_error\",\"param\":null,\"code\":\"invalid_request_error\"}}"
+    }
+  },
+  {
+    "name": "火山方舟(豆包)",
+    "base_url": "https://ark.cn-beijing.volces.com/api/plan/v3",
+    "models_error": "HTTP 404: ",
+    "model": "doubao-seed-2-1-pro-260915",
+    "chat": {
+      "ok": true,
+      "http": 200,
+      "latency_ms": 2546,
+      "reply": "正常",
+      "prompt_tokens": 52,
+      "completion_tokens": 32
+    }
+  },
+  {
+    "name": "小米 MiMo",
+    "base_url": "https://api.xiaomimimo.com/v1",
+    "models_count": 7,
+    "models_sample": [
+      "mimo-v2.5-asr",
+      "mimo-v2.5-tts",
+      "mimo-v2.5-tts-voiceclone",
+      "mimo-v2.5-tts-voicedesign",
+      "mimo-v2.6-flash",
+      "mimo-v2.6-pro",
+      "mimo-v2.6-pro-ultraspeed"
+    ],
+    "model": "mimo-v2.6-flash",
+    "chat": {
+      "ok": true,
+      "http": 200,
+      "latency_ms": 6953,
+      "reply": "正常",
+      "prompt_tokens": 13,
+      "completion_tokens": 19
+    }
+  },
+  {
+    "name": "MikuAPI",
+    "base_url": "https://mikuapi.org/v1",
+    "models_count": 14,
+    "models_sample": [
+      "codex-auto-review",
+      "gpt-5.2",
+      "gpt-5.3-codex",
+      "gpt-5.3-codex-spark",
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "gpt-5.5",
+      "gpt-5.6",
+      "gpt-5.6-luna",
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-6-astra"
+    ],
+    "model": "codex-auto-review",
+    "chat": {
+      "ok": true,
+      "http": 200,
+      "latency_ms": 4819,
+      "reply": "正常",
+      "prompt_tokens": 4392,
+      "completion_tokens": 5
+    }
+  }
+]

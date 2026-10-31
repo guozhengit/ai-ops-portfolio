@@ -1,6 +1,11 @@
 target/
 .cache/
-data/
+# data/ 下的证据账本（usage.jsonl / usage-report.json）由根 .gitignore 放行；
+# 本文件的 data/ 规则会压掉根级 ! 放行，这里必须重复例外（见 2026-10-31 修正）。
+!data/
+data/*
+!data/usage.jsonl
+!data/usage-report.json
 .tmp/
 ttsrouter-data*.mv.db
 ttsrouter-data*.trace.db
