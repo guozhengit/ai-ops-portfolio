@@ -1,0 +1,34 @@
+{
+  "specVersion": 1,
+  "subject": "self-healing-agent 主档路径补测（MTTD + 白名单自动止血首跑）",
+  "artifact": "prototypes/self-healing-agent/reports/incident-20261031T073301.637357400Z-e2e1002.md",
+  "generatedAt": "2026-10-31T07:33:01Z",
+  "model": {
+    "provider": "miku（主档）/ ark（兜底，本场未触发）",
+    "modelName": "deepseek-v4.1-flash（口径换代：原 gpt-5.4-mini 旧 key 上游 502）",
+    "baseUrl": "miku https://mikuapi.org/v1 · ark https://ark.cn-beijing.volces.com/api/plan/v3",
+    "keyFingerprint": "miku sha256:ff4a2f45 · ark sha256:5ff80336",
+    "fallback": "doubao-seed-2.1-turbo @ ark（未触发）"
+  },
+  "config": {
+    "configVersion": "12be8ac",
+    "routerConfig": "selfhealing.agent.*：AGENT_MODEL=deepseek-v4.1-flash，worker 并行（7ff3584），max-rounds=6；注入场景 pool-exhaustion"
+  },
+  "environment": {
+    "host": "本机 Windows（服务 8400）+ 160 靶机（Prometheus 9091 / chaos-demo 9400）",
+    "notes": "告警为 webhook 直注（160 Alertmanager 9093 未监听，未走 AM hop，与 README 标准测试入口一致）；测毕 chaos:off 已复位，靶场无残留"
+  },
+  "measurement": {
+    "method": "MTTD 口径 = journal receivedAt → 报告文件 mtime：07:28:50.775Z → 07:33:11.482Z = 260.7s ≈ 4m21s；自动执行证据 = approvals.jsonl 审计 id apr-1793431991466-1（HTTP 200）",
+    "rawRecords": [
+      "prototypes/self-healing-agent/data/incidents.jsonl（#15，fp=e2e1002）",
+      "prototypes/self-healing-agent/data/approvals.jsonl（1 自动执行 + 3 待审）",
+      "prototypes/self-healing-agent/reports/incident-20261031T073301.637357400Z-e2e1002.md"
+    ],
+    "knownCaveats": [
+      "口径换代：主模型 deepseek-v4.1-flash + worker 并行两个变化叠加，与 e2e1001 的 8m34s、降级路径 6m42s 不可直接比",
+      "主档调用含 1 次瞬态重试（EOF reached，指数退避自愈）",
+      "动作提取器无兜底缺陷未受考验（primary 全程存活）；提取成功 4 条，白名单 1 条自动执行，3 条按边界待人工审批"
+    ]
+  }
+}

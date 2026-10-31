@@ -36,9 +36,10 @@
 
 ## 原型 1 · self-healing-agent（W2，沿用记录）
 
-- **MTTD 未达野心目标**：同场景（连接池、降级路径）串行→并行 A/B 为 8m02s → 6m42s；健康路径基线（e2e1001）8m34s（≈8.6min）；目标 ≤5min 未达成
-- **主模型路径未复测**：MikuAPI 持续 503，盲测 6/6 全走降级路径（方舟兜底）
-- **动作提取器**走 primary 无兜底，主模型恢复后需补验
+- **MTTD 未达野心目标**：同场景（连接池、降级路径）串行→并行 A/B 为 8m02s → 6m42s；健康路径基线（e2e1001）8m34s（≈8.6min）；**2026-10-31 主档补测 e2e1002 达成 4m21s**（口径换代：deepseek-v4.1-flash + 并行 worker，与历史数字不同口径）——≤5min 首次达成，降级路径仍未达
+- **主模型路径已补测（2026-10-31 e2e1002）**：主档 deepseek-v4.1-flash 全程无降级标记，报告/归因卡见 `reports/e2e1002.md` + `e2e1002.run-spec.json`；注意主模型已换代（gpt-5.4-mini 旧 key 上游仍 502），不可与 e2e1001 直接比
+- **动作提取器** primary 路径已补验通过（e2e1002 提取 4 条结构化动作，白名单动作 `chaos:off:pool-exhaustion` 自动执行成功，审计 apr-1793431991466-1）；**无兜底缺陷仍在**——本次 primary 全程存活未考验兜底链路（期 2 D2.1 关账）
+- **401 被拒请求也会写 journal**（2026-10-31 发现）：空 payload 401 留下 fingerprint=null 的 entry，审计噪音，低优先级
 - **重启清内存去重**：agent 重启会清空 InMemory DedupService，同一 firing 告警可能重复诊断（低优先级）
 - **审计账本历史瑕疵**：`data/approvals.jsonl` 早期开发迭代的 created 事件里 `decidedBy` 落成了字符串 `"null"`
   （正式版代码是 `""` 兜底 + UTF-8 落盘，2026-10-31 核对过全文件 UTF-8 无乱码）。历史审计只追加不改写，
