@@ -6,8 +6,10 @@
 现场采集 160 真数据，跑 drift，再用 scoring/score.py 算 precision/recall。
 评分器自身先过 self_test（元验证），否则不评原型。
 
-用法：python scoring/run_score.py [--offline]
-  --offline  不连 160，改用最近一次 reports/local/findings.jsonl 里的 drift 结果
+用法：python scoring/run_score.py [--offline] [--offline-file PATH] [--out PATH]
+  --offline          不连 160，改用最近一次 reports/local/findings.jsonl 里的 drift 结果
+  --offline-file PATH  证据重放门禁用：从指定留档 findings 文件重建评分（写 --out，不碰原件）
+  --out PATH         结果 JSON 输出路径（默认 scoring/score-result-160.json）
 """
 
 from __future__ import annotations
@@ -38,8 +40,8 @@ def _live_drift():
     return ts, drift.run(Context(targets=ts, baseline=base))
 
 
-def _offline_drift():
-    path = os.path.join(ROOT, "reports", "local", "findings.jsonl")
+def _offline_drift(path=None):
+    path = path or os.path.join(ROOT, "reports", "local", "findings.jsonl")
     out = []
     with open(path, "r", encoding="utf-8") as fh:
         for line in fh:
@@ -49,8 +51,18 @@ def _offline_drift():
     return None, out
 
 
+def _arg_value(flag):
+    """手工取 --flag VALUE（参数量小，不值得引入 argparse 双轨）。"""
+    if flag in sys.argv:
+        i = sys.argv.index(flag)
+        if i + 1 < len(sys.argv):
+            return sys.argv[i + 1]
+    return None
+
+
 def main():
-    offline = "--offline" in sys.argv
+    offline_file = _arg_value("--offline-file")
+    offline = "--offline" in sys.argv or offline_file is not None
     if not self_test():
         print("评分器元验证未通过，拒绝评分（先修评分器）")
         return 1
@@ -58,7 +70,11 @@ def main():
     golden_doc = _load_golden()
     golden = golden_doc["golden_findings"]
 
-    if offline:
+    if offline_file:
+        ts, findings = _offline_drift(offline_file)
+        reported = {f["id"]: f["severity"] for f in findings}
+        source = "offline-file:%s" % offline_file
+    elif offline:
         ts, findings = _offline_drift()
         reported = {f["id"]: f["severity"] for f in findings}
         source = "offline(reports/local/findings.jsonl)"
@@ -93,8 +109,8 @@ def main():
         print("  - %s" % lim)
     print("=" * 66)
 
-    # 落一份 JSON 结果，供 verification/ 汇总读取
-    out_path = os.path.join(HERE, "score-result-160.json")
+    # 落一份 JSON 结果，供 verification/ 汇总读取（重放门禁用 --out 写临时目录，不碰入库原件）
+    out_path = _arg_value("--out") or os.path.join(HERE, "score-result-160.json")
     payload = {
         "source": source,
         "golden_source": golden_doc["source"],

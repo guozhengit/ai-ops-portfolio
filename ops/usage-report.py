@@ -129,6 +129,8 @@ def main():
     parser.add_argument("--path", type=Path, default=DEFAULT_PATH, help="usage.jsonl 路径")
     parser.add_argument("--days", type=int, default=0, help="只看最近 N 天（0 = 全部）")
     parser.add_argument("--json", action="store_true", help="同时写 JSON 报告")
+    parser.add_argument("--json-out", type=Path, default=None,
+                        help="JSON 报告输出路径（默认 data/usage-report.json；证据重放门禁传临时目录，避免覆盖入库原件）")
     args = parser.parse_args()
 
     if not args.path.exists():
@@ -186,9 +188,10 @@ def main():
             "byChannel": by_channel,
             "byModel": by_model,
         }
-        DEFAULT_JSON_OUT.parent.mkdir(parents=True, exist_ok=True)
-        DEFAULT_JSON_OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"JSON 报告已写：{DEFAULT_JSON_OUT}")
+        json_out = args.json_out or DEFAULT_JSON_OUT
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+        json_out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"JSON 报告已写：{json_out}")
     return 0
 
 

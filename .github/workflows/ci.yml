@@ -102,6 +102,11 @@ jobs:
         working-directory: prototypes/infra-checkup
         run: python cli.py verify-scorer
 
+      # 证据重放门禁（V2 期2 C2）：派生产物（评分/聚合账本）必须能从原始记录逐位重建，
+      # 否则说明真相层与派生层漂移——门禁直接红。
+      - name: 证据重放门禁（重建→归一化逐位比对→刷新 manifest）
+        run: bash verification/replay/replay.sh
+
       # CI 连不到内网 160，真机 precision/recall 由本地 scoring/run_score.py 产出并留档；
       # 这里用内置快照跑一次评分器，保证评分链路本身在 CI 可复现。
       - name: 评分链路冒烟（内置快照，不依赖外网）

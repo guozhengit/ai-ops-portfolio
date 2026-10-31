@@ -165,51 +165,21 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
     }
 
     /**
-     * D11：从诊断报告提取修复动作 → 白名单内低风险动作自动沙箱执行，
+     * D11：从诊断报告提取修复动作 → 白名单内低风险动作自动执行，
      * 其余进入人工审批队列；所有动作与结果追加进报告文件。
+     * V2-D2.1：primary 提取失败（异常或未按 JSON 输出）时降级 fallback 重试一次
+     *（关账 D12 遗留 #3——D12 盲测 6 场提取全灭的根因）；提取 schema 增加
+     * reversibility/blast_radius 两个模型自报信号，分级裁决以 docs/action-classes.md 为准。
      */
     private void proposeActions(String fp, String alertName, Path reportPath, String reportText) {
         StringBuilder record = new StringBuilder("\n## 审批与执行记录（D11）\n\n");
         try {
-            ReActAgent extractor = ReActAgent.builder()
-                    .name("action-extractor")
-                    .sysPrompt("你是运维动作提取器。只输出 JSON 数组，不要输出任何其他文字。")
-                    .model(model())
-                    .toolkit(new Toolkit())
-                    .build();
-            String prompt = "从下面的诊断报告提取修复动作，输出 JSON 数组，每项格式：\n"
-                    + "{\"description\":\"动作描述\",\"risk\":\"low|medium|high\",\"executable_command\":\"...\"}\n"
-                    + "executable_command 只能取 chaos:off:<scene>（scene ∈ memory-leak|slow-sql|disk-full|pool-exhaustion|nacos-flap）"
-                    + "或 null（无安全执行通道）。最多 5 项。\n\n报告：\n" + reportText;
-            Msg r = callWithRetry(extractor, prompt, Duration.ofMinutes(3));
-            String text = r != null ? r.getTextContent() : "";
-            int s = text.indexOf('[');
-            int e = text.lastIndexOf(']');
-            if (s < 0 || e <= s) {
-                record.append("- 未能解析出结构化动作（模型未按 JSON 输出），跳过。");
-            } else {
-                JsonNode arr = MAPPER.readTree(text.substring(s, e + 1));
-                for (JsonNode item : arr) {
-                    String desc = item.path("description").asText("(无描述)");
-                    String risk = item.path("risk").asText("unknown");
-                    String cmd = item.path("executable_command").asText(null);
-                    boolean cmdOk = cmd != null && ActionExecutor.whitelisted(cmd);
-                    ApprovalStore.ApprovalRequest apr = approvals.create(fp, alertName, desc, risk, cmdOk ? cmd : null);
-                    if (cmdOk && "low".equalsIgnoreCase(risk)) {
-                        // 白名单 + 低风险：按策略自动批准并执行（审计里 decidedBy 留痕）
-                        approvals.decide(apr.id, "approve", "auto-policy:whitelisted-low-risk");
-                        ActionExecutor.ExecResult result = executor.execute(cmd);
-                        approvals.markExecuted(apr, result.output(), result.ok());
-                        record.append("- ✅ **自动执行**（白名单+低风险）`").append(cmd).append("`：")
-                                .append(result.output()).append("（审计 id=").append(apr.id).append("）\n");
-                        log.info("[actions] 自动执行 {} -> {}", cmd, result.ok());
-                    } else {
-                        record.append("- ⏸ **待人工审批** risk=").append(risk)
-                                .append(cmd != null ? "（有执行通道，批准后自动执行）" : "（无安全执行通道，批准也仅记录）")
-                                .append("：").append(desc).append("（id=`").append(apr.id).append("`）\n");
-                        log.info("[actions] 待人工审批 id={} risk={}", apr.id, risk);
-                    }
-                }
+            boolean ok = extractAndDispatch(fp, alertName, reportText, record, apiKey, baseUrl, modelName, "primary");
+            if (!ok && fallbackApiKey != null && !fallbackApiKey.isBlank()) {
+                log.warn("[actions] primary 提取未成功，降级 fallback({}) 重试", fallbackModel);
+                record.append("- primary 提取未成功，降级 fallback（").append(fallbackModel).append("）重试。\n");
+                extractAndDispatch(fp, alertName, reportText, record,
+                        fallbackApiKey, fallbackBaseUrl, fallbackModel, "fallback");
             }
         } catch (Exception ex) {
             record.append("- 动作提取失败：").append(ex.getClass().getSimpleName()).append(" ").append(ex.getMessage());
@@ -220,6 +190,67 @@ public class AgentTeamDispatcher implements IncidentDispatcher {
         } catch (Exception ex) {
             log.error("[actions] 报告追加失败: {}", ex.toString());
         }
+    }
+
+    /**
+     * 单次提取尝试（指定模型三元组）。返回 true=解析成功并已分发；false=未按 JSON 输出（调用方可降级重试）。
+     * 闸门裁决保持「白名单 && risk=low && 非制度禁行」，分级以 docs/action-classes.md 为准：
+     * 模型自报 reversibility=irreversible 时强制进人工队列（制度线不随模型自报移动）。
+     */
+    private boolean extractAndDispatch(String fp, String alertName, String reportText, StringBuilder record,
+                                       String apiKey, String baseUrl, String modelName, String sourceTag) throws Exception {
+        ReActAgent extractor = ReActAgent.builder()
+                .name("action-extractor")
+                .sysPrompt("你是运维动作提取器。只输出 JSON 数组，不要输出任何其他文字。")
+                .model(model(apiKey, baseUrl, modelName))
+                .toolkit(new Toolkit())
+                .build();
+        String prompt = "从下面的诊断报告提取修复动作，输出 JSON 数组，每项格式：\n"
+                + "{\"description\":\"动作描述\",\"risk\":\"low|medium|high\","
+                + "\"reversibility\":\"reversible|hard-to-reverse|irreversible\","
+                + "\"blast_radius\":\"影响面与回滚成本一句话\","
+                + "\"executable_command\":\"...\"}\n"
+                + "executable_command 只能取 chaos:off:<scene>（scene ∈ memory-leak|slow-sql|disk-full|pool-exhaustion|nacos-flap）"
+                + "或 null（无安全执行通道）。最多 5 项。\n\n报告：\n" + reportText;
+        Msg r = callWithRetry(extractor, prompt, Duration.ofMinutes(3));
+        String text = r != null ? r.getTextContent() : "";
+        int s = text.indexOf('[');
+        int e = text.lastIndexOf(']');
+        if (s < 0 || e <= s) {
+            record.append("- 未能解析出结构化动作（模型未按 JSON 输出，").append(sourceTag).append("）。");
+            return false;
+        }
+        JsonNode arr = MAPPER.readTree(text.substring(s, e + 1));
+        for (JsonNode item : arr) {
+            String desc = item.path("description").asText("(无描述)");
+            String risk = item.path("risk").asText("unknown");
+            String reversibility = item.path("reversibility").asText("");
+            String blast = item.path("blast_radius").asText("");
+            String cmd = item.path("executable_command").asText(null);
+            boolean cmdOk = cmd != null && ActionExecutor.whitelisted(cmd);
+            // A1 制度线（docs/action-classes.md）：不可逆类 forbidden 永不自动执行，模型自报不豁免
+            boolean tableForbidden = "irreversible".equalsIgnoreCase(reversibility);
+            ApprovalStore.ApprovalRequest apr =
+                    approvals.create(fp, alertName, desc, risk, cmdOk && !tableForbidden ? cmd : null);
+            String meta = reversibility.isEmpty() ? ""
+                    : "，可逆性=" + reversibility + (blast.isEmpty() ? "" : "（" + blast + "）");
+            if (cmdOk && !tableForbidden && "low".equalsIgnoreCase(risk)) {
+                // 白名单 + 低风险 + 非禁行：按策略自动批准并执行（审计里 decidedBy 留痕）
+                approvals.decide(apr.id, "approve", "auto-policy:whitelisted-low-risk");
+                ActionExecutor.ExecResult result = executor.execute(cmd);
+                approvals.markExecuted(apr, result.output(), result.ok());
+                record.append("- ✅ **自动执行**（白名单+低风险）`").append(cmd).append("`：")
+                        .append(result.output()).append("（审计 id=").append(apr.id).append(meta).append("）\n");
+                log.info("[actions] 自动执行 {} -> {}", cmd, result.ok());
+            } else {
+                String reason = tableForbidden ? "（制度线：不可逆，永不自动执行）"
+                        : cmd != null ? "（有执行通道，批准后自动执行）" : "（无安全执行通道，批准也仅记录）";
+                record.append("- ⏸ **待人工审批** risk=").append(risk).append(meta).append(reason)
+                        .append("：").append(desc).append("（id=`").append(apr.id).append("`）\n");
+                log.info("[actions] 待人工审批 id={} risk={}", apr.id, risk);
+            }
+        }
+        return true;
     }
 
     /** 搭建一次性诊断 Team 并跑完编排循环，返回 lead 的最终报告文本。 */

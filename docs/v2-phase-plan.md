@@ -130,8 +130,8 @@
 **现状雏形**（侦察确认）：`run_score.py --offline` 已能从 findings.jsonl 离线重建评分；`ops/usage-report.py --json` 已能从 usage.jsonl 完全重放 usage-report.json。重放不是新发明，是收拢成门禁。
 
 **前置修复（半天量级）**：
-1. findings.jsonl **0 条发现也落盘**（现状 0 条时无文件，重放会假阴性）
-2. 编码归一：`checkup-160-20261030.md` 是 GBK，转码 UTF-8 留档（原文件保留加 `.gbk` 后缀，对齐"审计只追加不改写"）
+1. findings.jsonl **0 条发现也落盘**（现状 0 条时无文件，重放会假阴性）——已落地（cli.py 无条件写）
+2. ~~编码归一~~ **误诊更正**：字节级验证 checkup-160-20261030.md 本就是 UTF-8，此前「GBK」是 GBK 终端显示 UTF-8 的假象。教训：编码结论必须字节级验证，凭终端显示定编码会造出不存在的前置工作
 3. md 报告（原型 1 reports/）**v1 不做重建**——设计决策：md 报告定性为"渲染产物"，证据锚定在其引用的 jsonl 记录 id 上；重建脚本列为期 3 可选
 
 **重放门禁**：`verification/replay/replay.sh`：
@@ -150,11 +150,11 @@
 
 ### 期 2 验收门
 
-- [ ] 提取器兜底落地，主模型故障场提取不再全灭
-- [ ] 信任标定两代际 × 6 场，三分类数据表 + run_spec 卡
+- [ ] 提取器兜底落地，主模型故障场提取不再全灭（**代码已落地**：fallback 重试 + schema 扩展 + 制度禁行守卫，2026-10-31；故障场复测待真实 primary 故障或实验窗口验证）
+- [ ] 信任标定两代际 × 6 场，三分类数据表 + run_spec 卡（真值与协议已入库：`verification/scenarios/self-healing-groundtruth.json` + `self-healing-cases.md`；G2 单点 = e2e1002）
 - [ ] tier 矩阵测试进 CI 全绿（含 upgrade path 桩版）
 - [ ] 预算熔断演练通过（429 + 留痕 + 恢复）
-- [ ] 重放门禁 CI 绿，manifest.sha256 入库
+- [x] 重放门禁 CI 绿，manifest.sha256 入库（2026-10-31 本地逐位一致 ×2；CI 随本提交生效；首跑即抓获 usage-report 快照滞后 19 行——门禁有效性实证）
 
 ---
 

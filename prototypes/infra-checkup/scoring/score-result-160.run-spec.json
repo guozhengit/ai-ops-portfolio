@@ -16,7 +16,7 @@
   },
   "environment": {
     "host": "数据源 160 真机（Prometheus 192.168.1.160:9091）；评分执行在本机 Windows",
-    "notes": "live 现采；真机留档报告 checkup-160-20261030.md 为 GBK 编码"
+    "notes": "live 现采；留档报告 checkup-160-20261030.md 经字节级验证为 UTF-8（2026-10-31 更正：此前「GBK」系 GBK 终端显示 UTF-8 的假象，未做字节级验证就下了结论）"
   },
   "measurement": {
     "method": "run_score.py live 连 160 现采 drift findings → score() 对照 groundtruth-160.json；结果 precision=1.0 / recall=1.0（tp=5, fn=0, fp=0）",
@@ -29,7 +29,7 @@
       "覆盖面仅 drift 维度（golden_count=5），不证明 credscan/exposure 准确率",
       "exposure 未做真实全端口扫描（SSH 免密不通），0 条结论范围有限",
       "黄金答案是人工核对产物，其可信度依赖 manual-review 流程本身",
-      "留档 md 为 GBK 编码，重放/重建前需先归一（期 2 C2 前置修复项）"
+      "「留档 md 为 GBK」的早期记载系误诊（GBK 终端显示假象），2026-10-31 字节级验证更正为 UTF-8，无需归一"
     ]
   }
 }

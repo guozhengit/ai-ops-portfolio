@@ -55,7 +55,7 @@
 
 流式那边还有个纯工程问题：SSE 一路透传给客户端，token 数在哪？答案是 usage 出现在带 `finish_reason: stop` 的那一帧里。我在旁边接了个抄表的（`SseUsageStream`），字节原样透传一字节不少，顺手把最后一帧的 usage 抄进账本。真流量实证：263 帧、74KB 的流式响应，账本里 promptTokens 35、completionTokens 262——token 精确了，成本**依然**是 null。价目未知这件事，不会因为 token 数知道了就变得已知。
 
-跑下来的真实账本（`prototypes/model-router/data/usage-report.json`）：6 次调用、合计 $0.00119，其中 2 笔成本未知；方舟 3 次平均 20.9 秒、最慢一次 55.4 秒，MiMo 835 毫秒 $0.000005。数字小到可笑，但这不是重点——重点是那 2 笔「不知道」被如实留在了账上，聚合脚本里它们单独计数，不混进总额。
+跑下来的真实账本（`prototypes/model-router/data/usage-report-20261029.json`，2026-10-29 时点快照；现行聚合随账本滚动，见 `data/usage-report.json`）：6 次调用、合计 $0.00119，其中 2 笔成本未知；方舟 3 次平均 20.9 秒、最慢一次 55.4 秒，MiMo 835 毫秒 $0.000005。数字小到可笑，但这不是重点——重点是那 2 笔「不知道」被如实留在了账上，聚合脚本里它们单独计数，不混进总额。
 
 ## 面板是给重启时刻的自己用的
 
@@ -72,7 +72,7 @@
 ## 数据在哪
 
 - 渠道验证全过程（两把 key 对照、11 次采样、错误原文）：`prototypes/model-router/docs/channel-verification-miku-20261029.md`
-- 账本原件和聚合：`prototypes/model-router/data/usage.jsonl`、`data/usage-report.json`（聚合脚本 `ops/usage-report.py`，未知成本单独计数）
+- 账本原件和聚合：`prototypes/model-router/data/usage.jsonl`、`data/usage-report.json`（聚合脚本 `ops/usage-report.py`，未知成本单独计数；文中引用的 6 行数字出自时点快照 `data/usage-report-20261029.json`，现行聚合已随账本增长到 25 行，由证据重放门禁逐位校验）
 - 状态分类与恢复链路：`HttpChannelStatusTest`、`ChannelRecoveryTest`（本地 HttpServer 走真实 HTTP，不是 mock）
 - 多渠道健康探测快照：`data/channel-report.json`
 - 已知缺陷与边界：`verification/redteam/known-defects.md` 原型 2 一节

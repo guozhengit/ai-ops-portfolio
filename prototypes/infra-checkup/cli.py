@@ -64,8 +64,9 @@ def cmd_run(args):
         fh.write(report.render(ctx, findings, check_log))
 
     jsonl = os.path.join(outdir, "findings.jsonl")
-    if findings:
-        runner.write_jsonl(findings, jsonl)
+    # 0 条发现也落盘（V2-C2）：空文件是「查了且无发现」的证据，缺文件无法与「没查」区分，
+    # 会让证据重放门禁的假阴性检查失效。write_jsonl 追加语义不变。
+    runner.write_jsonl(findings, jsonl)
 
     c = counts(findings)
     print("体检完成：P0=%d P1=%d P2=%d，共 %d 条" %

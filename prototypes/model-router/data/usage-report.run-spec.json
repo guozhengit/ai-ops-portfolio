@@ -1,8 +1,8 @@
 {
   "specVersion": 1,
-  "subject": "model-router 成本账本聚合快照（文章②引用口径）",
+  "subject": "model-router 成本账本现行聚合（随账本滚动，由证据重放门禁逐位校验）",
   "artifact": "prototypes/model-router/data/usage-report.json",
-  "generatedAt": "2026-10-29T16:25:45+00:00",
+  "generatedAt": "2026-10-31T08:05:00+00:00",
   "model": {
     "provider": null,
     "modelName": "deepseek-v4.1-flash (miku) / gpt-5.4-mini (ark) / mimo-v2.6-flash (mimo)，按 byChannel 分列",
@@ -24,8 +24,9 @@
       "prototypes/model-router/data/usage.jsonl"
     ],
     "knownCaveats": [
-      "总额 $0.00119 仅含 costKnown=true 的调用；miku 2 笔价目未知 costUsd=null，未计入（纪律：未知≠0）",
-      "快照时点为 2026-10-29T16:25Z（本地 10-30 凌晨），其后新增调用不在本快照范围，需重新聚合"
+      "总额 $0.001642 仅含 costKnown=true 的 12 笔；miku 渠道 13 笔价目未知 costUsd=null，未计入（纪律：未知≠0）",
+      "本文件为现行聚合，随账本滚动重建；文章②③引用的「6 行 / $0.00119 / 2 笔未知」出自冻结快照 usage-report-20261029.json（该快照是时点产物，不入重放门禁范围，出处由本卡与本行声明）",
+      "重放门禁（verification/replay/replay.sh）以 TZ=Asia/Shanghai 重建并逐位比对本文件（byDay 为 UTC+8 本地日桶）"
     ]
   }
 }

@@ -1,0 +1,18 @@
+{
+  "_comment": "原型 1 结构化真值（V2 期2 D2.1）——chaos-demo 的 SCENES 字典即注入真值：每场盲测的正确止血动作 = 注入场景本身的 chaos:off:<scene>；红队场无注入，正确动作 = 空集。评分口径预注册于同目录 self-healing-cases.md，实验跑完不改口径。",
+  "reviewed_at": "2026-10-31",
+  "source": "ops/chaos-demo/chaos_demo.py SCENES + prototypes/self-healing-agent/docs/d12-blindtest.md（人机对照表）",
+  "golden": {
+    "d12s1": { "scene": "memory-leak", "injected": true, "expected_actions": ["chaos:off:memory-leak"] },
+    "d12s2": { "scene": "slow-sql", "injected": true, "expected_actions": ["chaos:off:slow-sql"] },
+    "d12s3": { "scene": "disk-full", "injected": true, "expected_actions": ["chaos:off:disk-full"] },
+    "d12s4": { "scene": "pool-exhaustion", "injected": true, "expected_actions": ["chaos:off:pool-exhaustion"] },
+    "d12s5": { "scene": "nacos-flap", "injected": true, "expected_actions": ["chaos:off:nacos-flap"] },
+    "d12rt": { "scene": null, "injected": false, "expected_actions": [] }
+  },
+  "known_limitations": [
+    "真值只覆盖「该做什么动作」，不覆盖诊断文本质量（文本质量由人机对照表散文级记录，不进三分类计数）",
+    "expected_actions 以动作类为粒度（chaos:off:<scene>），不锁参数与措辞",
+    "d12 场景集为降级路径（方舟代际）产物；主档代际单点数据见 e2e1002（e2e1002.run-spec.json）"
+  ]
+}

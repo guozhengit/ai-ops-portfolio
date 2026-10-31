@@ -1,17 +1,17 @@
 {
   "source": "D:\\AI\\ai-ops-portfolio\\prototypes\\model-router\\data\\usage.jsonl",
-  "generatedAt": "2026-10-29T16:25:45.410582+00:00",
-  "rows": 6,
+  "generatedAt": "2026-10-31T08:18:42.271473+00:00",
+  "rows": 25,
   "badLines": 0,
   "total": {
-    "calls": 6,
-    "promptTokens": 239,
-    "completionTokens": 2245,
-    "costUsd": 0.00119,
-    "unknownCostCalls": 2,
-    "streamCalls": 1,
-    "latencyAvgMs": 12901.7,
-    "latencyP95Ms": 7251,
+    "calls": 25,
+    "promptTokens": 870,
+    "completionTokens": 6074,
+    "costUsd": 0.001642,
+    "unknownCostCalls": 13,
+    "streamCalls": 5,
+    "latencyAvgMs": 7139.3,
+    "latencyP95Ms": 15649,
     "latencyMaxMs": 55392
   },
   "byDay": {
@@ -23,89 +23,100 @@
       "unknownCostCalls": 1,
       "streamCalls": 0,
       "latencyAvgMs": 14031.8,
-      "latencyP95Ms": 6770,
+      "latencyP95Ms": 55392,
       "latencyMaxMs": 55392
     },
     "2026-10-30": {
-      "calls": 1,
-      "promptTokens": 35,
-      "completionTokens": 262,
-      "costUsd": 0.0,
-      "unknownCostCalls": 1,
-      "streamCalls": 1,
-      "latencyAvgMs": 7251,
-      "latencyP95Ms": 7251,
-      "latencyMaxMs": 7251
+      "calls": 20,
+      "promptTokens": 666,
+      "completionTokens": 4091,
+      "costUsd": 0.000452,
+      "unknownCostCalls": 12,
+      "streamCalls": 5,
+      "latencyAvgMs": 5416.2,
+      "latencyP95Ms": 15010,
+      "latencyMaxMs": 15649
     }
   },
   "byChannel": {
     "ark": {
-      "calls": 3,
-      "promptTokens": 156,
-      "completionTokens": 1936,
-      "costUsd": 0.001185,
+      "calls": 6,
+      "promptTokens": 306,
+      "completionTokens": 2480,
+      "costUsd": 0.001534,
       "unknownCostCalls": 0,
       "streamCalls": 0,
-      "latencyAvgMs": 20851.3,
-      "latencyP95Ms": 4480,
+      "latencyAvgMs": 14001,
+      "latencyP95Ms": 55392,
       "latencyMaxMs": 55392
     },
     "miku": {
-      "calls": 2,
-      "promptTokens": 72,
-      "completionTokens": 299,
+      "calls": 13,
+      "promptTokens": 487,
+      "completionTokens": 3347,
       "costUsd": 0.0,
-      "unknownCostCalls": 2,
-      "streamCalls": 1,
-      "latencyAvgMs": 7010.5,
-      "latencyP95Ms": 6770,
-      "latencyMaxMs": 7251
+      "unknownCostCalls": 13,
+      "streamCalls": 4,
+      "latencyAvgMs": 6243.1,
+      "latencyP95Ms": 15649,
+      "latencyMaxMs": 15649
     },
     "mimo": {
-      "calls": 1,
-      "promptTokens": 11,
-      "completionTokens": 10,
-      "costUsd": 5e-06,
+      "calls": 6,
+      "promptTokens": 77,
+      "completionTokens": 247,
+      "costUsd": 0.000108,
       "unknownCostCalls": 0,
-      "streamCalls": 0,
-      "latencyAvgMs": 835,
-      "latencyP95Ms": 835,
-      "latencyMaxMs": 835
+      "streamCalls": 1,
+      "latencyAvgMs": 2219.5,
+      "latencyP95Ms": 4593,
+      "latencyMaxMs": 4593
     }
   },
   "byModel": {
     "deepseek-v4.1-flash": {
-      "calls": 2,
-      "promptTokens": 72,
-      "completionTokens": 299,
+      "calls": 13,
+      "promptTokens": 487,
+      "completionTokens": 3347,
       "costUsd": 0.0,
-      "unknownCostCalls": 2,
-      "streamCalls": 1,
-      "latencyAvgMs": 7010.5,
-      "latencyP95Ms": 6770,
-      "latencyMaxMs": 7251
+      "unknownCostCalls": 13,
+      "streamCalls": 4,
+      "latencyAvgMs": 6243.1,
+      "latencyP95Ms": 15649,
+      "latencyMaxMs": 15649
     },
-    "gpt-5.4-mini": {
-      "calls": 3,
-      "promptTokens": 156,
-      "completionTokens": 1936,
-      "costUsd": 0.001185,
+    "doubao-seed-2.1-turbo": {
+      "calls": 1,
+      "promptTokens": 54,
+      "completionTokens": 386,
+      "costUsd": 0.00024,
       "unknownCostCalls": 0,
       "streamCalls": 0,
-      "latencyAvgMs": 20851.3,
-      "latencyP95Ms": 4480,
+      "latencyAvgMs": 15010,
+      "latencyP95Ms": 15010,
+      "latencyMaxMs": 15010
+    },
+    "gpt-5.4-mini": {
+      "calls": 5,
+      "promptTokens": 252,
+      "completionTokens": 2094,
+      "costUsd": 0.001294,
+      "unknownCostCalls": 0,
+      "streamCalls": 0,
+      "latencyAvgMs": 13799.2,
+      "latencyP95Ms": 55392,
       "latencyMaxMs": 55392
     },
     "mimo-v2.6-flash": {
-      "calls": 1,
-      "promptTokens": 11,
-      "completionTokens": 10,
-      "costUsd": 5e-06,
+      "calls": 6,
+      "promptTokens": 77,
+      "completionTokens": 247,
+      "costUsd": 0.000108,
       "unknownCostCalls": 0,
-      "streamCalls": 0,
-      "latencyAvgMs": 835,
-      "latencyP95Ms": 835,
-      "latencyMaxMs": 835
+      "streamCalls": 1,
+      "latencyAvgMs": 2219.5,
+      "latencyP95Ms": 4593,
+      "latencyMaxMs": 4593
     }
   }
 }
